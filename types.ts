@@ -18,6 +18,7 @@ export interface Product {
   minStock: number;
   description: string;
   lastUpdated: string;
+  imageUrl?: string;
 }
 
 export interface Employee {

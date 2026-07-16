@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Product, Assignment, ScrappedItem, StockLog } from '../types';
-import { Edit, Trash2, Search, Filter, Plus, AlertCircle, ArrowDownCircle, UserPlus, Package, Box } from 'lucide-react';
+import { Edit, Trash2, Search, Filter, Plus, AlertCircle, ArrowDownCircle, UserPlus, Package, Box, Image as ImageIcon, ChevronDown } from 'lucide-react';
 
 interface InventoryProps {
   products: Product[];
@@ -54,17 +54,18 @@ const Inventory: React.FC<InventoryProps> = ({
           </div>
           
           <div className="relative">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10" size={16} />
             <select 
               value={filterCategory} 
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="w-full md:w-48 pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer text-sm font-medium"
+              className="w-full md:w-48 pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer text-sm font-medium relative z-0"
             >
               <option value="All">All Categories</option>
               {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" size={16} />
           </div>
         </div>
 
@@ -87,8 +88,15 @@ const Inventory: React.FC<InventoryProps> = ({
           const totalVal = product.quantity * product.price;
           return (
             <div key={product.id} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-4">
-               <div className="flex justify-between items-start">
-                  <div>
+               <div className="flex items-start gap-4">
+                  {product.imageUrl ? (
+                    <img src={product.imageUrl} alt={product.name} className="w-16 h-16 rounded-xl object-cover bg-slate-50 border border-slate-100" />
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300">
+                      <ImageIcon size={24} />
+                    </div>
+                  )}
+                  <div className="flex-1">
                     <h4 className="font-black text-slate-900 leading-tight">{product.name}</h4>
                     <p className="text-xs text-slate-500 mt-0.5">{product.nameZh || 'No Chinese Name'}</p>
                     <div className="flex items-center gap-2 mt-2">
@@ -96,10 +104,15 @@ const Inventory: React.FC<InventoryProps> = ({
                        <span className="text-[9px] font-mono text-slate-400">SKU: {product.sku}</span>
                     </div>
                   </div>
+               </div>
+               <div className="flex items-end justify-between mt-2 pt-4 border-t border-slate-50">
+                  <div className="text-left">
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-tighter mb-1">Total Value</p>
+                    <p className="text-xs font-black text-emerald-600">${totalVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                  </div>
                   <div className="text-right">
                     <p className={`text-2xl font-black ${isLowStock ? 'text-red-500' : 'text-slate-900'}`}>{product.quantity}</p>
                     <p className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Units Left</p>
-                    <p className="text-[10px] font-black text-emerald-600 mt-1">${totalVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                   </div>
                </div>
                
@@ -125,7 +138,8 @@ const Inventory: React.FC<InventoryProps> = ({
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                <th className="px-8 py-4">Asset Identification</th>
+                <th className="px-8 py-4">Photo</th>
+                <th className="px-4 py-4">Asset Identification</th>
                 <th className="px-4 py-4 text-center">Inbound Hist.</th>
                 <th className="px-4 py-4 text-center">Active Usage</th>
                 <th className="px-4 py-4 text-center">Scrap Count</th>
@@ -155,6 +169,15 @@ const Inventory: React.FC<InventoryProps> = ({
                   return (
                     <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
                       <td className="px-8 py-5">
+                        {product.imageUrl ? (
+                          <img src={product.imageUrl} alt={product.name} className="w-12 h-12 rounded-xl object-cover bg-slate-50 border border-slate-100" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300">
+                            <ImageIcon size={20} />
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-5">
                         <div className="flex flex-col">
                            <div className="font-black text-slate-900 leading-none">{product.name}</div>
                            <div className="text-xs text-slate-400 mt-1 font-medium">{product.nameZh}</div>
@@ -210,7 +233,7 @@ const Inventory: React.FC<InventoryProps> = ({
                 })
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-8 py-20 text-center text-slate-500">
+                  <td colSpan={8} className="px-8 py-20 text-center text-slate-500">
                     <div className="flex flex-col items-center gap-4">
                       <Package size={64} className="text-slate-100" strokeWidth={1} />
                       <p className="font-black uppercase text-xs tracking-widest text-slate-300">Warehouse inventory is empty</p>

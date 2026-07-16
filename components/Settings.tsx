@@ -168,6 +168,7 @@ alter table products add column if not exists price numeric default 0;
 alter table products add column if not exists min_stock integer default 5;
 alter table products add column if not exists description text;
 alter table products add column if not exists last_updated timestamptz default now();
+alter table products add column if not exists image_url text;
 
 -- 3. STAFF & TRANSACTIONS
 create table if not exists employees (

@@ -31,7 +31,8 @@ export const fetchProducts = async (warehouseId: string): Promise<Product[]> => 
     price: p.price || 0,
     minStock: p.min_stock || 0,
     description: p.description || '',
-    lastUpdated: p.last_updated || new Date().toISOString()
+    lastUpdated: p.last_updated || new Date().toISOString(),
+    imageUrl: p.image_url
   }));
 };
 
@@ -47,7 +48,8 @@ export const upsertProduct = async (product: Product): Promise<void> => {
     price: product.price,
     min_stock: product.minStock,
     description: product.description,
-    last_updated: product.lastUpdated
+    last_updated: product.lastUpdated,
+    image_url: product.imageUrl
   };
 
   const { error } = await supabase.from('products').upsert(dbRecord);

@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Product } from '../types';
-import { X, Sparkles, Loader2, DollarSign } from 'lucide-react';
+import { X, Sparkles, Loader2, DollarSign, Image as ImageIcon, ChevronDown } from 'lucide-react';
 import { generateProductDescription } from '../services/geminiService';
 
 interface ProductModalProps {
@@ -22,9 +22,11 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, ca
     quantity: 0,
     price: 0,
     minStock: 5,
-    description: ''
+    description: '',
+    imageUrl: ''
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (product) {
@@ -38,7 +40,8 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, ca
         quantity: 0,
         price: 0,
         minStock: 5,
-        description: ''
+        description: '',
+        imageUrl: ''
       });
     }
   }, [product, isOpen, categories]);
@@ -51,6 +54,21 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, ca
       ...prev,
       [name]: name === 'quantity' || name === 'price' || name === 'minStock' ? Number(value) : value
     }));
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, imageUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerImageUpload = () => {
+    fileInputRef.current?.click();
   };
 
   const handleGenerateDescription = async () => {
@@ -76,7 +94,8 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, ca
       price: formData.price || 0,
       minStock: formData.minStock || 0,
       description: formData.description || '',
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
+      imageUrl: formData.imageUrl
     };
     onSave(newProduct);
     onClose();
@@ -99,6 +118,28 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, ca
         <form onSubmit={handleSubmit} className="p-6 md:p-8 overflow-y-auto space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             
+            <div className="col-span-1 md:col-span-2">
+              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Product Image</label>
+              <div className="flex items-center gap-4">
+                <div 
+                  onClick={triggerImageUpload}
+                  className="w-24 h-24 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors overflow-hidden group relative"
+                >
+                  {formData.imageUrl ? (
+                    <img src={formData.imageUrl} alt="Product" className="w-full h-full object-cover" />
+                  ) : (
+                    <ImageIcon size={24} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-slate-700 mb-1">Upload a photo</p>
+                  <p className="text-xs text-slate-500 mb-3">JPG, PNG, GIF up to 2MB. Recommended 1:1 ratio.</p>
+                  <button type="button" onClick={triggerImageUpload} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-slate-50 transition-colors">Choose File</button>
+                  <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+                </div>
+              </div>
+            </div>
+
             <div className="col-span-1">
               <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Label (EN)</label>
               <input
@@ -141,18 +182,19 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, ca
               />
             </div>
 
-            <div>
+            <div className="relative">
               <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Category</label>
               <select
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl outline-none bg-slate-50/50 text-sm font-bold appearance-none"
+                className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 transition-all bg-slate-50/50 text-sm font-bold appearance-none cursor-pointer"
               >
                 {categories.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
+              <ChevronDown className="absolute right-4 top-[38px] text-slate-400 pointer-events-none" size={16} />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 col-span-1 md:col-span-2">

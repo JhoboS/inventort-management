@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { StockLog } from '../types';
-import { ClipboardList, ArrowDownCircle, PlusCircle, Trash2, UserPlus, ArrowLeftCircle, Filter, Clock, Calendar } from 'lucide-react';
+import { ClipboardList, ArrowDownCircle, PlusCircle, Trash2, UserPlus, ArrowLeftCircle, Filter, Clock, Calendar, ChevronDown } from 'lucide-react';
 
 interface LogsProps {
   logs: StockLog[];
@@ -69,17 +69,20 @@ const Logs: React.FC<LogsProps> = ({ logs }) => {
           
           <div className="flex items-center gap-3">
              <Filter size={14} className="text-slate-400" />
-             <select 
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="bg-white border border-slate-200 text-xs font-black uppercase tracking-widest rounded-2xl px-4 py-3 focus:ring-2 focus:ring-blue-500/20 outline-none cursor-pointer shadow-sm min-w-[160px]"
-             >
-                 <option value="ALL">All Actions</option>
-                 <option value="INBOUND">Inbound / Create</option>
-                 <option value="ASSIGN">Assigned</option>
-                 <option value="RETURN">Returned</option>
-                 <option value="SCRAP">Scrapped</option>
-             </select>
+             <div className="relative">
+               <select 
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="bg-white border border-slate-200 text-xs font-black uppercase tracking-widest rounded-2xl px-4 pr-10 py-3 focus:ring-2 focus:ring-blue-500/20 outline-none cursor-pointer shadow-sm min-w-[160px] appearance-none relative z-0"
+               >
+                   <option value="ALL">All Actions</option>
+                   <option value="INBOUND">Inbound / Create</option>
+                   <option value="ASSIGN">Assigned</option>
+                   <option value="RETURN">Returned</option>
+                   <option value="SCRAP">Scrapped</option>
+               </select>
+               <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+             </div>
           </div>
         </div>
         
