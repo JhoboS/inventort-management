@@ -1,0 +1,101 @@
+  const sqlSchema = `-- REPAIR TERMINAL: FULL DATABASE GENERATION (V4.5)
+-- Run this to fix "Failed to fetch" errors, missing columns, or missing tables.
+
+-- 1. CORE ARCHITECTURE & TABLES
+create table if not exists warehouses (
+  id uuid primary key default gen_random_uuid(), 
+  name text not null, 
+  location text, 
+  created_at timestamptz default now()
+);
+
+create table if not exists app_users (
+  id uuid primary key references auth.users(id),
+  email text unique not null,
+  is_approved boolean default false,
+  role text default 'user',
+  assigned_warehouses uuid[] default '{}',
+  created_at timestamptz default now()
+);
+
+-- Ensure all columns exist in app_users even if table was already created
+alter table app_users add column if not exists is_approved boolean default false;
+alter table app_users add column if not exists role text default 'user';
+alter table app_users add column if not exists assigned_warehouses uuid[] default '{}';
+
+-- 2. INVENTORY & TAXONOMY
+create table if not exists categories (
+  id uuid primary key default gen_random_uuid(),
+  warehouse_id uuid references warehouses(id),
+  name text not null,
+  created_at timestamptz default now()
+);
+
+-- Ensure all columns exist in categories
+alter table categories add column if not exists warehouse_id uuid references warehouses(id);
+alter table categories add column if not exists name text;
+
+create table if not exists products (
+  id uuid primary key default gen_random_uuid(),
+  warehouse_id uuid references warehouses(id),
+  name text not null,
+  name_zh text,
+  sku text,
+  category text,
+  quantity integer default 0,
+  price numeric default 0,
+  min_stock integer default 5,
+  description text,
+  last_updated timestamptz default now(),
+  created_at timestamptz default now()
+);
+
+-- Ensure all columns exist in products
+alter table products add column if not exists warehouse_id uuid references warehouses(id);
+alter table products add column if not exists name_zh text;
+alter table products add column if not exists sku text;
+alter table products add column if not exists category text;
+alter table products add column if not exists quantity integer default 0;
+alter table products add column if not exists price numeric default 0;
+alter table products add column if not exists min_stock integer default 5;
+alter table products add column if not exists description text;
+alter table products add column if not exists last_updated timestamptz default now();
+
+-- 3. STAFF & TRANSACTIONS
+create table if not exists employees (
+  id uuid primary key default gen_random_uuid(),
+  warehouse_id uuid references warehouses(id),
+  name text not null,
+  email text,
+  department text,
+  role text,
+  joined_date timestamptz default now(),
+  created_at timestamptz default now()
+);
+
+-- Ensure all columns exist in employees
+alter table employees add column if not exists warehouse_id uuid references warehouses(id);
+
+create table if not exists assignments (
+  id uuid primary key default gen_random_uuid(),
+  warehouse_id uuid references warehouses(id),
+  product_id uuid references products(id),
+  product_name text,
+  product_name_zh text,
+  employee_id uuid references employees(id),
+  employee_name text,
+  quantity integer default 1,
+  assigned_date timestamptz default now(),
+  status text default 'Active',
+  performed_by text,
+  created_at timestamptz default now()
+);
+
+-- Ensure all columns exist in assignments
+alter table assignments add column if not exists warehouse_id uuid references warehouses(id);
+
+create table if not exists scrapped_items (
+  id uuid primary key default gen_random_uuid(),
+  warehouse_id uuid references warehouses(id),
+  product_id uuid references products(id),
+  product_name text,
