@@ -107,10 +107,10 @@ const StockOperationModal: React.FC<StockOperationModalProps> = ({
           
           {/* Product Selection */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-slate-700">Select Product</label>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Select Product</label>
             {!initialProduct ? (
               <div className="relative">
-                <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input
                   type="text"
                   placeholder="Search product (EN/CN)..."
@@ -119,10 +119,10 @@ const StockOperationModal: React.FC<StockOperationModalProps> = ({
                     setSearchTerm(e.target.value);
                     setSelectedProductId(''); // Reset selection on search change
                   }}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                  className="w-full pl-12 pr-5 py-3.5 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-slate-50/50 text-sm font-bold transition-all"
                 />
                 {searchTerm && !selectedProductId && filteredProducts.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <div className="absolute z-10 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-48 overflow-y-auto">
                     {filteredProducts.map(p => (
                       <div
                         key={p.id}
@@ -130,87 +130,87 @@ const StockOperationModal: React.FC<StockOperationModalProps> = ({
                           setSelectedProductId(p.id);
                           setSearchTerm(p.name);
                         }}
-                        className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex justify-between items-center"
+                        className="px-5 py-3 hover:bg-slate-50 cursor-pointer flex justify-between items-center transition-colors"
                       >
                         <div className="overflow-hidden">
-                            <span className="font-medium text-slate-700 truncate block">{p.name}</span>
-                            <span className="text-xs text-slate-500 block">{p.nameZh}</span>
+                            <span className="font-bold text-slate-700 truncate block text-sm">{p.name}</span>
+                            <span className="text-xs text-slate-400 font-medium block">{p.nameZh}</span>
                         </div>
-                        <span className="text-xs text-slate-500 ml-2 whitespace-nowrap">Qty: {p.quantity}</span>
+                        <span className="text-[10px] font-black text-slate-400 whitespace-nowrap bg-slate-100 px-2 py-1 rounded-md">QTY: {p.quantity}</span>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700">
-                {initialProduct.name} <span className="text-sm text-slate-500">({initialProduct.nameZh})</span>
+              <div className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 font-bold text-sm">
+                {initialProduct.name} <span className="text-sm font-medium text-slate-500 ml-1">({initialProduct.nameZh})</span>
               </div>
             )}
           </div>
 
           {/* Quantity */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Quantity</label>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Quantity</label>
             <input
               type="number"
               min="1"
               required
               value={quantity}
               onChange={(e) => setQuantity(Number(e.target.value))}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+              className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-slate-50/50 text-sm font-black transition-all"
             />
           </div>
 
           {/* Type Specific Fields */}
           {type === 'ASSIGN' && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Select Employee</label>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Select Employee</label>
               <div className="relative">
                 <select
                   required
                   value={employeeId}
                   onChange={(e) => setEmployeeId(e.target.value)}
-                  className="w-full pl-4 pr-10 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white appearance-none cursor-pointer"
+                  className="w-full pl-5 pr-10 py-3.5 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-slate-50/50 text-sm font-bold appearance-none cursor-pointer transition-all"
                 >
                   <option value="">Select an employee...</option>
                   {employees.map(emp => (
                       <option key={emp.id} value={emp.id}>{emp.name}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
               </div>
             </div>
           )}
 
           {type === 'SCRAP' && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Reason for Scrap</label>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Reason for Scrap</label>
               <textarea
                 required
-                rows={2}
+                rows={3}
                 placeholder="e.g. Broken screen, expired, lost"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-white"
+                className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-slate-50/50 text-sm font-medium resize-none transition-all"
               />
             </div>
           )}
 
-          <div className="pt-4 flex justify-end gap-3">
+          <div className="pt-6 flex gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-slate-700 font-medium hover:bg-slate-200 rounded-lg transition-colors"
+              className="flex-1 px-4 py-4 text-slate-500 font-black uppercase text-xs tracking-widest hover:bg-slate-100 rounded-2xl transition-all"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className={`px-6 py-2 text-white font-medium rounded-lg shadow-md transition-all 
-                ${type === 'INBOUND' ? 'bg-green-600 hover:bg-green-700 shadow-green-500/30' : 
-                  type === 'ASSIGN' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30' : 
-                  'bg-red-600 hover:bg-red-700 shadow-red-500/30'}`}
+              className={`flex-1 px-4 py-4 text-white font-black uppercase text-xs tracking-widest rounded-2xl shadow-xl transition-all 
+                ${type === 'INBOUND' ? 'bg-green-600 hover:bg-green-700 shadow-green-600/20' : 
+                  type === 'ASSIGN' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : 
+                  'bg-red-600 hover:bg-red-700 shadow-red-600/20'}`}
             >
               Confirm
             </button>

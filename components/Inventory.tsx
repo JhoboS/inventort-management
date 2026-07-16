@@ -54,18 +54,18 @@ const Inventory: React.FC<InventoryProps> = ({
           </div>
           
           <div className="relative">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10" size={16} />
+            <Filter className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 z-10" size={14} />
             <select 
               value={filterCategory} 
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="w-full md:w-48 pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer text-sm font-medium relative z-0"
+              className="w-full md:w-56 pl-11 pr-10 py-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer text-xs font-black uppercase tracking-widest shadow-sm relative z-0 transition-all"
             >
               <option value="All">All Categories</option>
               {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
-            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" size={16} />
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" size={14} />
           </div>
         </div>
 

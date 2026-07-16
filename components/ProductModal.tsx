@@ -188,7 +188,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, ca
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 transition-all bg-slate-50/50 text-sm font-bold appearance-none cursor-pointer"
+                className="w-full pl-5 pr-10 py-3.5 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 transition-all bg-slate-50/50 text-sm font-bold appearance-none cursor-pointer"
               >
                 {categories.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
