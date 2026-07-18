@@ -117,7 +117,20 @@ const Inventory: React.FC<InventoryProps> = ({
                </div>
                
                <div className="flex items-center gap-2 pt-4 border-t border-slate-50">
-                  <button onClick={() => onAssign(product)} className="flex-1 bg-blue-50 text-blue-600 py-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2">
+                  <button 
+                    onClick={() => {
+                      if (product.quantity <= 0) {
+                        alert(`"${product.name}" available stock is 0. Cannot assign.`);
+                        return;
+                      }
+                      onAssign(product);
+                    }} 
+                    className={`flex-1 py-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2 transition-all
+                      ${product.quantity <= 0 
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+                        : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                    title={product.quantity <= 0 ? "Out of Stock (Cannot Assign)" : "Assign"}
+                  >
                     <UserPlus size={14} /> Assign
                   </button>
                   <button onClick={() => onEditProduct(product)} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2">
@@ -217,7 +230,21 @@ const Inventory: React.FC<InventoryProps> = ({
 
                       <td className="px-8 py-5 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-40 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => onAssign(product)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Assign">
+                          <button 
+                            onClick={() => {
+                              if (product.quantity <= 0) {
+                                alert(`"${product.name}" available stock is 0. Cannot assign.`);
+                                return;
+                              }
+                              onAssign(product);
+                            }} 
+                            className={`p-2 rounded-xl transition-all ${
+                              product.quantity <= 0 
+                                ? 'text-slate-300 cursor-not-allowed' 
+                                : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50'
+                            }`} 
+                            title={product.quantity <= 0 ? "Out of Stock (Cannot Assign)" : "Assign"}
+                          >
                             <UserPlus size={18} />
                           </button>
                           <button onClick={() => onEditProduct(product)} className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Edit">

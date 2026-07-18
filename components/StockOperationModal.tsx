@@ -22,6 +22,8 @@ const StockOperationModal: React.FC<StockOperationModalProps> = ({
   const [reason, setReason] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
+  const selectedProduct = products.find(p => p.id === selectedProductId);
+
   useEffect(() => {
     if (initialProduct) {
       setSelectedProductId(initialProduct.id);
@@ -46,12 +48,27 @@ const StockOperationModal: React.FC<StockOperationModalProps> = ({
 
     let employeeName = '';
     if (type === 'ASSIGN') {
+        if (product.quantity <= 0) {
+            alert(`"${product.name}" available stock is 0. Cannot assign.`);
+            return;
+        }
+        if (Number(quantity) > product.quantity) {
+            alert(`Cannot assign ${quantity} units. Only ${product.quantity} units are available.`);
+            return;
+        }
         const emp = employees.find(e => e.id === employeeId);
         if (!emp) {
             alert("Please select a valid employee.");
             return;
         }
         employeeName = emp.name;
+    }
+
+    if (type === 'SCRAP') {
+        if (Number(quantity) > product.quantity) {
+            alert(`Cannot scrap ${quantity} units. Only ${product.quantity} units are available.`);
+            return;
+        }
     }
 
     onSubmit({
@@ -143,23 +160,39 @@ const StockOperationModal: React.FC<StockOperationModalProps> = ({
                 )}
               </div>
             ) : (
-              <div className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 font-bold text-sm">
-                {initialProduct.name} <span className="text-sm font-medium text-slate-500 ml-1">({initialProduct.nameZh})</span>
+              <div className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 font-bold text-sm flex justify-between items-center">
+                <div className="truncate">
+                  {initialProduct.name} <span className="text-sm font-medium text-slate-500 ml-1">({initialProduct.nameZh})</span>
+                </div>
+                <span className="text-[10px] font-black text-slate-400 whitespace-nowrap bg-slate-200/50 px-2.5 py-1 rounded-md">QTY: {initialProduct.quantity}</span>
               </div>
             )}
           </div>
 
           {/* Quantity */}
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Quantity</label>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">
+              Quantity {type !== 'INBOUND' && selectedProduct && `(Max: ${selectedProduct.quantity})`}
+            </label>
             <input
               type="number"
               min="1"
+              max={type !== 'INBOUND' ? selectedProduct?.quantity : undefined}
               required
               value={quantity}
               onChange={(e) => setQuantity(Number(e.target.value))}
               className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-slate-50/50 text-sm font-black transition-all"
             />
+            {type !== 'INBOUND' && selectedProduct && Number(quantity) > selectedProduct.quantity && (
+              <p className="mt-1.5 text-xs font-bold text-red-500 animate-fade-in flex items-center gap-1.5 ml-1">
+                ⚠️ Cannot exceed available stock ({selectedProduct.quantity} available)
+              </p>
+            )}
+            {type !== 'INBOUND' && selectedProduct && selectedProduct.quantity === 0 && (
+              <p className="mt-1.5 text-xs font-bold text-red-500 animate-fade-in flex items-center gap-1.5 ml-1">
+                ⚠️ Out of stock. Cannot perform this operation.
+              </p>
+            )}
           </div>
 
           {/* Type Specific Fields */}
@@ -207,10 +240,12 @@ const StockOperationModal: React.FC<StockOperationModalProps> = ({
             </button>
             <button
               type="submit"
+              disabled={type !== 'INBOUND' && selectedProduct && (selectedProduct.quantity === 0 || Number(quantity) > selectedProduct.quantity || Number(quantity) <= 0)}
               className={`flex-1 px-4 py-4 text-white font-black uppercase text-xs tracking-widest rounded-2xl shadow-xl transition-all 
                 ${type === 'INBOUND' ? 'bg-green-600 hover:bg-green-700 shadow-green-600/20' : 
                   type === 'ASSIGN' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : 
-                  'bg-red-600 hover:bg-red-700 shadow-red-600/20'}`}
+                  'bg-red-600 hover:bg-red-700 shadow-red-600/20'} 
+                disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none`}
             >
               Confirm
             </button>
