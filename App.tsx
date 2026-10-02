@@ -339,7 +339,7 @@ const App: React.FC = () => {
               <div className="pb-10">
                 {currentView === 'dashboard' && <Dashboard products={products} />}
                 {currentView === 'inventory' && <Inventory products={products} categories={categories} assignments={assignments} scrappedItems={scrappedItems} logs={stockLogs} onAddProduct={() => { setEditingProduct(undefined); setIsProductModalOpen(true); }} onEditProduct={(p) => { setEditingProduct(p); setIsProductModalOpen(true); }} onDeleteProduct={deleteProductApi} onInbound={() => { setStockOpType('INBOUND'); setSelectedStockProduct(undefined); setIsStockOpModalOpen(true); }} onAssign={(p) => { setStockOpType('ASSIGN'); setSelectedStockProduct(p); setIsStockOpModalOpen(true); }} onScrap={(p) => { setStockOpType('SCRAP'); setSelectedStockProduct(p); setIsStockOpModalOpen(true); }} />}
-                {currentView === 'employees' && <Employees employees={employees} assignments={assignments} onAddEmployee={handleAddEmployee} onReturnAsset={handleReturnAsset} />}
+                {currentView === 'employees' && <Employees employees={employees} assignments={assignments} products={products} onAddEmployee={handleAddEmployee} onReturnAsset={handleReturnAsset} />}
                 {currentView === 'logs' && <Logs logs={stockLogs} />}
                 {currentView === 'settings' && <Settings categories={categories} products={products} assignments={assignments} employees={employees} scrappedItems={scrappedItems} onAddCategory={async (c) => {
                     try {

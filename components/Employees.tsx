@@ -1,16 +1,17 @@
 
 import React, { useState } from 'react';
-import { Employee, Assignment } from '../types';
-import { User, Mail, Briefcase, Plus, Search, Calendar, Package, X, ChevronRight, Box, Tag, ArrowLeftCircle } from 'lucide-react';
+import { Employee, Assignment, Product } from '../types';
+import { User, Mail, Briefcase, Plus, Search, Calendar, Package, X, ChevronRight, Box, Tag, ArrowLeftCircle, Image as ImageIcon } from 'lucide-react';
 
 interface EmployeesProps {
   employees: Employee[];
   assignments: Assignment[];
+  products?: Product[];
   onAddEmployee: (employee: Employee) => void;
   onReturnAsset: (assignment: Assignment) => void;
 }
 
-const Employees: React.FC<EmployeesProps> = ({ employees, assignments, onAddEmployee, onReturnAsset }) => {
+const Employees: React.FC<EmployeesProps> = ({ employees, assignments, products = [], onAddEmployee, onReturnAsset }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -190,29 +191,42 @@ const Employees: React.FC<EmployeesProps> = ({ employees, assignments, onAddEmpl
               
               {getEmployeeAssignments(selectedEmployee.id).length > 0 ? (
                 <div className="space-y-3">
-                  {getEmployeeAssignments(selectedEmployee.id).map(assign => (
-                    <div key={assign.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center flex-wrap gap-2">
-                      <div>
-                        <p className="font-bold text-slate-800">{assign.productName}</p>
-                        {assign.productNameZh && <p className="text-xs text-slate-500">{assign.productNameZh}</p>}
-                        <div className="flex gap-3 text-xs text-slate-400 mt-1">
-                             <span>Qty: {assign.quantity}</span>
-                             <span>Assigned: {new Date(assign.assignedDate).toLocaleDateString()}</span>
+                  {getEmployeeAssignments(selectedEmployee.id).map(assign => {
+                    const prod = products.find(p => p.id === assign.productId);
+                    return (
+                      <div key={assign.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center flex-wrap gap-3">
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          {prod?.imageUrl ? (
+                            <img src={prod.imageUrl} alt={assign.productName} className="w-12 h-12 rounded-xl object-cover bg-slate-50 border border-slate-100 flex-shrink-0" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 flex-shrink-0">
+                              <ImageIcon size={20} />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-800 truncate">{assign.productName}</p>
+                            {assign.productNameZh && <p className="text-xs text-slate-500 truncate">{assign.productNameZh}</p>}
+                            <div className="flex items-center gap-2.5 text-xs text-slate-400 mt-1">
+                              <span className="font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">Qty: {assign.quantity}</span>
+                              <span>•</span>
+                              <span>Assigned: {new Date(assign.assignedDate).toLocaleDateString()}</span>
+                            </div>
+                          </div>
                         </div>
+                        <button 
+                          onClick={() => {
+                              if(window.confirm(`Confirm return of ${assign.productName} from ${selectedEmployee.name}? Stock will increase by ${assign.quantity}.`)) {
+                                  onReturnAsset(assign);
+                              }
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors flex-shrink-0"
+                        >
+                          <ArrowLeftCircle size={14} />
+                          Return to Inventory
+                        </button>
                       </div>
-                      <button 
-                        onClick={() => {
-                            if(window.confirm(`Confirm return of ${assign.productName} from ${selectedEmployee.name}? Stock will increase by ${assign.quantity}.`)) {
-                                onReturnAsset(assign);
-                            }
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors"
-                      >
-                        <ArrowLeftCircle size={14} />
-                        Return to Inventory
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8 text-slate-500 bg-white rounded-lg border border-dashed border-slate-300">

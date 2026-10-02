@@ -304,47 +304,33 @@ const ProductModal: React.FC<ProductModalProps> = ({
             </div>
 
             {product && (
-              <div className="col-span-1 md:col-span-2 pt-6 border-t border-slate-100">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                      <Users size={18} />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                        Current Active Users / 正在使用该物品的人员
-                      </h4>
-                      <p className="text-[11px] text-slate-400">
-                        Staff members currently assigned to this asset
-                      </p>
-                    </div>
-                  </div>
-                  <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border ${
-                    totalInUseQuantity > 0 
-                      ? 'bg-blue-50 text-blue-600 border-blue-200' 
-                      : 'bg-slate-50 text-slate-500 border-slate-200'
-                  }`}>
-                    {totalInUseQuantity} In Use ({activeAssignments.length} {activeAssignments.length === 1 ? 'person' : 'people'})
+              <div className="col-span-1 md:col-span-2 pt-4 border-t border-slate-100">
+                <div className="flex items-center justify-between mb-3 ml-1">
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Active Assignments
+                  </label>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {totalInUseQuantity} In Use • {activeAssignments.length} {activeAssignments.length === 1 ? 'Holder' : 'Holders'}
                   </span>
                 </div>
 
                 {activeAssignments.length > 0 ? (
-                  <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                  <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
                     {activeAssignments.map(assign => (
                       <div 
                         key={assign.id} 
-                        className="bg-slate-50 hover:bg-slate-100/70 p-4 rounded-2xl border border-slate-200 flex items-center justify-between gap-4 transition-all"
+                        className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200 flex items-center justify-between gap-4 transition-all"
                       >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-sm flex-shrink-0 shadow-sm">
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-black text-sm flex-shrink-0">
                             {assign.employeeName.charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0">
                             <p className="font-bold text-sm text-slate-900 truncate">{assign.employeeName}</p>
-                            <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                              <span className="font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">Qty: {assign.quantity}</span>
-                              <span className="text-slate-300">•</span>
-                              <span className="text-slate-400">Assigned: {new Date(assign.assignedDate).toLocaleDateString()}</span>
+                            <div className="flex items-center gap-2.5 text-xs text-slate-400 mt-0.5">
+                              <span className="font-semibold text-slate-700">Qty: {assign.quantity}</span>
+                              <span>•</span>
+                              <span>Assigned: {new Date(assign.assignedDate).toLocaleDateString()}</span>
                             </div>
                           </div>
                         </div>
@@ -353,12 +339,12 @@ const ProductModal: React.FC<ProductModalProps> = ({
                           type="button"
                           disabled={returningId === assign.id}
                           onClick={() => handleReturn(assign)}
-                          className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl shadow-sm hover:shadow transition-all flex-shrink-0"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg shadow-sm transition-colors flex-shrink-0"
                         >
                           {returningId === assign.id ? (
                             <Loader2 size={14} className="animate-spin" />
                           ) : (
-                            <ArrowLeftCircle size={15} />
+                            <ArrowLeftCircle size={14} />
                           )}
                           Return to Inventory
                         </button>
@@ -366,10 +352,10 @@ const ProductModal: React.FC<ProductModalProps> = ({
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-7 px-4 bg-slate-50/70 rounded-2xl border border-dashed border-slate-200 text-slate-500">
-                    <Package size={26} className="mx-auto mb-2 opacity-40 text-slate-400" />
-                    <p className="text-xs font-bold text-slate-700">No active users currently assigned</p>
-                    <p className="text-[11px] text-slate-400 mt-1">All {formData.quantity || 0} unit(s) are stored in the warehouse.</p>
+                  <div className="text-center py-6 px-4 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 text-slate-400">
+                    <Package size={24} className="mx-auto mb-2 opacity-40 text-slate-400" />
+                    <p className="text-xs font-medium text-slate-600">No active assignments for this item</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">All stock units are currently available in the warehouse.</p>
                   </div>
                 )}
               </div>
