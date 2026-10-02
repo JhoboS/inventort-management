@@ -17,12 +17,29 @@ export const createWarehouseApi = async (name: string, location?: string): Promi
 
 // Products
 export const fetchProducts = async (warehouseId: string): Promise<Product[]> => {
-  const { data, error } = await supabase
+  let data: any[] | null = null;
+  
+  const res = await supabase
     .from('products')
     .select('*')
     .eq('warehouse_id', warehouseId)
     .order('created_at', { ascending: false });
-  if (error) throw error;
+
+  if (res.error) {
+    // If order by created_at fails (e.g. column does not exist in schema), fallback to basic select
+    if (res.error.message?.includes('created_at') || res.error.code === '42703') {
+      const fallbackRes = await supabase
+        .from('products')
+        .select('*')
+        .eq('warehouse_id', warehouseId);
+      if (fallbackRes.error) throw fallbackRes.error;
+      data = fallbackRes.data;
+    } else {
+      throw res.error;
+    }
+  } else {
+    data = res.data;
+  }
   
   return (data || []).map((p: any) => ({
     id: p.id,

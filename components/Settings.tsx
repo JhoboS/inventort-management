@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Tag, BrainCircuit, UserCog, ShieldCheck, X, Lock, Database, MapPin, Building2, Globe, Package } from 'lucide-react';
+import { Plus, Trash2, Tag, BrainCircuit, UserCog, ShieldCheck, X, Lock, Database, MapPin, Building2, Globe, Package, Copy, Check } from 'lucide-react';
 import AIAdvisor from './AIAdvisor';
 import { Product, Assignment, ScrappedItem, Employee, AppUser, Warehouse } from '../types';
 import { supabase } from '../services/supabaseClient';
@@ -17,11 +17,14 @@ interface SettingsProps {
   onImportData: (data: any) => void;
   currentUser: AppUser | null;
   activeWarehouseId: string;
+  showRepairModal?: boolean;
+  onCloseRepairModal?: () => void;
 }
 
 const Settings: React.FC<SettingsProps> = ({ 
   categories, products, assignments, scrappedItems, employees,
-  onAddCategory, onDeleteCategory, onImportData, currentUser, activeWarehouseId
+  onAddCategory, onDeleteCategory, onImportData, currentUser, activeWarehouseId,
+  showRepairModal, onCloseRepairModal
 }) => {
   const [activeTab, setActiveTab] = useState<'general' | 'advisor' | 'account' | 'users' | 'warehouses'>('general');
   const [newCategory, setNewCategory] = useState('');
@@ -34,6 +37,28 @@ const Settings: React.FC<SettingsProps> = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordMsg, setPasswordMsg] = useState({ type: '', text: '' });
   const [showSchema, setShowSchema] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (showRepairModal) {
+      setShowSchema(true);
+    }
+  }, [showRepairModal]);
+
+  const handleCloseModal = () => {
+    setShowSchema(false);
+    onCloseRepairModal?.();
+  };
+
+  const handleCopySql = async () => {
+    try {
+      await navigator.clipboard.writeText(sqlSchema);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch {
+      alert("Failed to copy automatically. Please select the text and copy manually.");
+    }
+  };
 
   const isSuperAdmin = currentUser?.role === 'super_admin';
 
@@ -169,6 +194,7 @@ alter table products add column if not exists min_stock integer default 5;
 alter table products add column if not exists description text;
 alter table products add column if not exists last_updated timestamptz default now();
 alter table products add column if not exists image_url text;
+alter table products add column if not exists created_at timestamptz default now();
 
 -- 3. STAFF & TRANSACTIONS
 create table if not exists employees (
@@ -352,11 +378,9 @@ NOTIFY pgrst, 'reload config';
                 <h3 className="text-xl font-black text-slate-900 flex items-center gap-3"><Tag className="text-blue-600" size={24} /> Category Settings</h3>
                 <p className="text-xs text-slate-500 mt-1 font-medium">Manage categorization for the current regional warehouse.</p>
               </div>
-              {isSuperAdmin && (
-                <button onClick={() => setShowSchema(true)} className="w-full sm:w-auto flex items-center justify-center gap-2 text-[10px] font-black uppercase text-white bg-blue-600 px-5 py-2.5 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20">
-                  <Database size={14} /> System SQL Repair (V4.5)
-                </button>
-              )}
+              <button onClick={() => setShowSchema(true)} className="w-full sm:w-auto flex items-center justify-center gap-2 text-[10px] font-black uppercase text-white bg-blue-600 px-5 py-2.5 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20">
+                <Database size={14} /> System SQL Repair (V4.5)
+              </button>
             </div>
             <form onSubmit={(e) => { e.preventDefault(); if(newCategory.trim()) { onAddCategory(newCategory.trim()); setNewCategory(''); }}} className="flex flex-col sm:flex-row gap-3 mb-10">
               <input type="text" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="New regional category..." className="flex-1 px-5 py-3.5 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 transition-all bg-slate-50/50 text-sm" />
@@ -495,21 +519,55 @@ NOTIFY pgrst, 'reload config';
       {showSchema && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md animate-fade-in p-4">
             <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="p-8 border-b border-slate-100 flex justify-between items-center">
-                  <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <Database size={24} className="text-blue-600" /> System SQL Repair
-                  </h2>
-                  <button onClick={() => setShowSchema(false)} className="text-slate-400 hover:text-slate-600">
-                    <X size={24} />
+                <div className="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                      <Database size={22} className="text-blue-600" /> Database Schema Repair (SQL)
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">Execute this script in Supabase SQL Editor to restore or add missing tables and columns without losing data.</p>
+                  </div>
+                  <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100">
+                    <X size={20} />
                   </button>
                 </div>
-                <div className="p-8 overflow-y-auto bg-slate-50 font-mono text-[10px] whitespace-pre-wrap flex-1">
+
+                <div className="bg-blue-50/60 border-b border-blue-100 px-6 py-3 text-xs text-blue-800 flex items-center justify-between flex-wrap gap-2">
+                  <span>💡 <b>How to repair:</b> 1. Copy script below → 2. Open Supabase Dashboard → SQL Editor → New query → 3. Paste & click <b>Run</b>.</span>
+                  <button
+                    onClick={handleCopySql}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ${
+                      copied 
+                        ? 'bg-emerald-600 text-white' 
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
+                  >
+                    {copied ? <Check size={14} /> : <Copy size={14} />}
+                    {copied ? 'Copied to Clipboard!' : 'Copy SQL Script'}
+                  </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto bg-slate-900 text-slate-200 font-mono text-[11px] leading-relaxed whitespace-pre-wrap flex-1 select-all">
                   {sqlSchema}
                 </div>
-                <div className="p-6 border-t border-slate-100 flex justify-end">
-                  <button onClick={() => setShowSchema(false)} className="bg-slate-900 text-white px-6 py-2 rounded-xl font-bold text-xs uppercase tracking-widest">
-                    Close
-                  </button>
+
+                <div className="p-4 md:p-6 border-t border-slate-100 flex justify-between items-center bg-slate-50/50">
+                  <span className="text-xs text-slate-400">Total lines: {sqlSchema.split('\n').length}</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleCopySql}
+                      className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                        copied 
+                          ? 'bg-emerald-600 text-white' 
+                          : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      }`}
+                    >
+                      {copied ? <Check size={14} /> : <Copy size={14} />}
+                      {copied ? 'Copied to Clipboard!' : 'Copy SQL Script'}
+                    </button>
+                    <button onClick={handleCloseModal} className="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-colors">
+                      Close
+                    </button>
+                  </div>
                 </div>
             </div>
         </div>

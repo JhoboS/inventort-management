@@ -51,6 +51,7 @@ const App: React.FC = () => {
   const [isStockOpModalOpen, setIsStockOpModalOpen] = useState(false);
   const [stockOpType, setStockOpType] = useState<OperationType>('INBOUND');
   const [selectedStockProduct, setSelectedStockProduct] = useState<Product | undefined>(undefined);
+  const [isSqlRepairOpen, setIsSqlRepairOpen] = useState(false);
 
   // Super Admin Check
   const isSuperAdminUser = useMemo(() => session?.user?.email === SUPER_ADMIN_EMAIL, [session]);
@@ -164,9 +165,8 @@ const App: React.FC = () => {
       setEditingProduct(prev => prev ? (prod.find(p => p.id === prev.id) || prev) : undefined);
       setSchemaError(null); 
     } catch (error: any) {
-        if (error.message?.includes('column') || error.message?.includes('relation')) {
-            setSchemaError("Database Schema mismatch. Run SQL Repair in Settings.");
-        }
+        console.error("Database schema/load error:", error);
+        setSchemaError(error.message ? `Database Error: ${error.message}` : "Database Schema mismatch. Run SQL Repair in Settings.");
     }
   };
 
@@ -265,12 +265,20 @@ const App: React.FC = () => {
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900 flex-col">
       {schemaError && (
-        <div className="bg-red-600 text-white px-4 py-3 flex items-center justify-between shadow-lg z-[150] sticky top-0 animate-fade-in">
-          <div className="flex items-center gap-3 text-sm font-bold">
-            <AlertTriangle size={20} className="animate-pulse" />
+        <div className="bg-red-600 text-white px-4 py-3 flex items-center justify-between shadow-lg z-[150] sticky top-0 animate-fade-in gap-3">
+          <div className="flex items-center gap-3 text-sm font-bold flex-1 min-w-0">
+            <AlertTriangle size={20} className="animate-pulse flex-shrink-0" />
             <span className="truncate">{schemaError}</span>
           </div>
-          <button onClick={() => { setCurrentView('settings'); setSchemaError(null); }} className="bg-white text-red-600 px-3 py-1 rounded-lg text-xs font-black hover:bg-slate-100 transition-all ml-4 flex-shrink-0">Resolve</button>
+          <button 
+            onClick={() => { 
+              setCurrentView('settings'); 
+              setIsSqlRepairOpen(true);
+            }} 
+            className="bg-white text-red-600 px-3.5 py-1.5 rounded-xl text-xs font-black hover:bg-slate-100 transition-all ml-4 flex-shrink-0 shadow-sm"
+          >
+            Resolve / SQL Repair
+          </button>
         </div>
       )}
 
@@ -356,7 +364,7 @@ const App: React.FC = () => {
                 {currentView === 'inventory' && <Inventory products={products} categories={categories} assignments={assignments} scrappedItems={scrappedItems} logs={stockLogs} onAddProduct={() => { setEditingProduct(undefined); setIsProductModalOpen(true); }} onEditProduct={(p) => { setEditingProduct(p); setIsProductModalOpen(true); }} onDeleteProduct={deleteProductApi} onInbound={() => { setStockOpType('INBOUND'); setSelectedStockProduct(undefined); setIsStockOpModalOpen(true); }} onAssign={(p) => { setStockOpType('ASSIGN'); setSelectedStockProduct(p); setIsStockOpModalOpen(true); }} onScrap={(p) => { setStockOpType('SCRAP'); setSelectedStockProduct(p); setIsStockOpModalOpen(true); }} />}
                 {currentView === 'employees' && <Employees employees={employees} assignments={assignments} products={products} onAddEmployee={handleAddEmployee} onReturnAsset={handleReturnAsset} />}
                 {currentView === 'logs' && <Logs logs={stockLogs} />}
-                {currentView === 'settings' && <Settings categories={categories} products={products} assignments={assignments} employees={employees} scrappedItems={scrappedItems} onAddCategory={async (c) => {
+                {currentView === 'settings' && <Settings categories={categories} products={products} assignments={assignments} employees={employees} scrappedItems={scrappedItems} showRepairModal={isSqlRepairOpen} onCloseRepairModal={() => setIsSqlRepairOpen(false)} onAddCategory={async (c) => {
                     try {
                         await addCategoryApi(c, activeWarehouseId);
                         await loadData();
