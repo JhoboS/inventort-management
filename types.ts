@@ -19,6 +19,7 @@ export interface Product {
   description: string;
   lastUpdated: string;
   imageUrl?: string;
+  createdAt?: string;
 }
 
 export interface Employee {

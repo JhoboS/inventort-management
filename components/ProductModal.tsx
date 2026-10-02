@@ -140,6 +140,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
       minStock: formData.minStock || 0,
       description: formData.description || '',
       lastUpdated: new Date().toISOString(),
+      createdAt: product?.createdAt || new Date().toISOString(),
       imageUrl: formData.imageUrl
     };
     onSave(newProduct);

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Product, Assignment, ScrappedItem, StockLog } from '../types';
-import { Edit, Trash2, Search, Filter, Plus, AlertCircle, ArrowDownCircle, UserPlus, Package, Box, Image as ImageIcon, ChevronDown } from 'lucide-react';
+import { Edit, Trash2, Search, Filter, Plus, AlertCircle, ArrowDownCircle, UserPlus, Package, Box, Image as ImageIcon, ChevronDown, ArrowUpDown } from 'lucide-react';
 
 interface InventoryProps {
   products: Product[];
@@ -24,6 +24,7 @@ const Inventory: React.FC<InventoryProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('All');
+  const [sortBy, setSortBy] = useState<'created_desc' | 'created_asc' | 'updated_desc' | 'name_asc'>('created_desc');
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -31,6 +32,33 @@ const Inventory: React.FC<InventoryProps> = ({
                           product.sku.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filterCategory === 'All' || product.category === filterCategory;
     return matchesSearch && matchesCategory;
+  });
+
+  const displayProducts = [...filteredProducts].sort((a, b) => {
+    if (sortBy === 'created_desc') {
+      const timeA = new Date(a.createdAt || a.lastUpdated).getTime();
+      const timeB = new Date(b.createdAt || b.lastUpdated).getTime();
+      if (timeB !== timeA) return timeB - timeA;
+      return b.id.localeCompare(a.id);
+    }
+    if (sortBy === 'created_asc') {
+      const timeA = new Date(a.createdAt || a.lastUpdated).getTime();
+      const timeB = new Date(b.createdAt || b.lastUpdated).getTime();
+      if (timeA !== timeB) return timeA - timeB;
+      return a.id.localeCompare(b.id);
+    }
+    if (sortBy === 'updated_desc') {
+      const timeA = new Date(a.lastUpdated || a.createdAt || '').getTime();
+      const timeB = new Date(b.lastUpdated || b.createdAt || '').getTime();
+      if (timeB !== timeA) return timeB - timeA;
+      return b.id.localeCompare(a.id);
+    }
+    if (sortBy === 'name_asc') {
+      const comp = a.name.localeCompare(b.name);
+      if (comp !== 0) return comp;
+      return a.id.localeCompare(b.id);
+    }
+    return 0;
   });
 
   const buttonClass = "flex-1 md:flex-none flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 px-5 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all shadow-sm";
@@ -58,12 +86,27 @@ const Inventory: React.FC<InventoryProps> = ({
             <select 
               value={filterCategory} 
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="w-full md:w-56 pl-11 pr-10 py-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer text-xs font-black uppercase tracking-widest shadow-sm relative z-0 transition-all"
+              className="w-full md:w-48 pl-11 pr-10 py-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer text-xs font-black uppercase tracking-widest shadow-sm relative z-0 transition-all text-slate-700"
             >
               <option value="All">All Categories</option>
               {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
+            </select>
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" size={14} />
+          </div>
+
+          <div className="relative">
+            <ArrowUpDown className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 z-10" size={14} />
+            <select 
+              value={sortBy} 
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="w-full md:w-52 pl-11 pr-10 py-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer text-xs font-black uppercase tracking-widest shadow-sm relative z-0 transition-all text-slate-700"
+            >
+              <option value="created_desc">Created: Newest</option>
+              <option value="created_asc">Created: Oldest</option>
+              <option value="updated_desc">Modified: Newest</option>
+              <option value="name_asc">Name: A to Z</option>
             </select>
             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" size={14} />
           </div>
@@ -83,7 +126,7 @@ const Inventory: React.FC<InventoryProps> = ({
 
       {/* Mobile-Optimized Card View */}
       <div className="grid grid-cols-1 gap-4 md:hidden">
-        {filteredProducts.map((product) => {
+        {displayProducts.map((product) => {
           const isLowStock = product.quantity <= product.minStock;
           const totalVal = product.quantity * product.price;
           return (
@@ -162,8 +205,8 @@ const Inventory: React.FC<InventoryProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filteredProducts.length > 0 ? (
-                filteredProducts.map((product) => {
+              {displayProducts.length > 0 ? (
+                displayProducts.map((product) => {
                   const isLowStock = product.quantity <= product.minStock;
                   const totalValue = product.quantity * product.price;
                   

@@ -17,7 +17,11 @@ export const createWarehouseApi = async (name: string, location?: string): Promi
 
 // Products
 export const fetchProducts = async (warehouseId: string): Promise<Product[]> => {
-  const { data, error } = await supabase.from('products').select('*').eq('warehouse_id', warehouseId);
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('warehouse_id', warehouseId)
+    .order('created_at', { ascending: false });
   if (error) throw error;
   
   return (data || []).map((p: any) => ({
@@ -31,13 +35,14 @@ export const fetchProducts = async (warehouseId: string): Promise<Product[]> => 
     price: p.price || 0,
     minStock: p.min_stock || 0,
     description: p.description || '',
-    lastUpdated: p.last_updated || new Date().toISOString(),
+    lastUpdated: p.last_updated || p.created_at || new Date().toISOString(),
+    createdAt: p.created_at || p.last_updated || new Date().toISOString(),
     imageUrl: p.image_url
   }));
 };
 
 export const upsertProduct = async (product: Product): Promise<void> => {
-  const dbRecord = {
+  const dbRecord: any = {
     id: product.id,
     warehouse_id: product.warehouseId,
     name: product.name,
@@ -51,6 +56,10 @@ export const upsertProduct = async (product: Product): Promise<void> => {
     last_updated: product.lastUpdated,
     image_url: product.imageUrl
   };
+
+  if (product.createdAt) {
+    dbRecord.created_at = product.createdAt;
+  }
 
   const { error } = await supabase.from('products').upsert(dbRecord);
   if (error) throw error;

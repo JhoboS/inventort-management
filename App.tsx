@@ -172,8 +172,13 @@ const App: React.FC = () => {
 
   const handleSaveProduct = async (product: Product) => {
     try {
-      const isNew = !products.find(p => p.id === product.id);
-      await upsertProduct({ ...product, warehouseId: activeWarehouseId });
+      const existing = products.find(p => p.id === product.id);
+      const isNew = !existing;
+      await upsertProduct({ 
+        ...product, 
+        warehouseId: activeWarehouseId,
+        createdAt: existing?.createdAt || product.createdAt || new Date().toISOString()
+      });
       await addStockLogApi({
         id: crypto.randomUUID(),
         warehouseId: activeWarehouseId,
@@ -196,7 +201,12 @@ const App: React.FC = () => {
       const product = products.find(p => p.id === productId);
       if (!product) return;
       const newQuantity = type === 'INBOUND' ? product.quantity + quantity : Math.max(0, product.quantity - quantity);
-      await upsertProduct({ ...product, quantity: newQuantity, lastUpdated: new Date().toISOString() });
+      await upsertProduct({ 
+        ...product, 
+        quantity: newQuantity, 
+        lastUpdated: new Date().toISOString(),
+        createdAt: product.createdAt
+      });
 
       if (type === 'ASSIGN') {
         await addAssignmentApi({ id: crypto.randomUUID(), warehouseId: activeWarehouseId, productId, productName, productNameZh: productNameZh || '', employeeId, employeeName, quantity, assignedDate: new Date().toISOString(), status: 'Active', performedBy: session.user.email });
@@ -214,7 +224,12 @@ const App: React.FC = () => {
   const handleReturnAsset = async (assignment: Assignment) => {
       try {
         const product = products.find(p => p.id === assignment.productId);
-        if (product) await upsertProduct({ ...product, quantity: product.quantity + assignment.quantity, lastUpdated: new Date().toISOString() });
+        if (product) await upsertProduct({ 
+          ...product, 
+          quantity: product.quantity + assignment.quantity, 
+          lastUpdated: new Date().toISOString(),
+          createdAt: product.createdAt
+        });
         await returnAssignmentApi(assignment.id);
         await addStockLogApi({ id: crypto.randomUUID(), warehouseId: activeWarehouseId, action: 'RETURN', productName: assignment.productName, quantity: assignment.quantity, performedBy: session.user.email, date: new Date().toISOString(), details: `Returned from ${assignment.employeeName}` });
         await loadData();
