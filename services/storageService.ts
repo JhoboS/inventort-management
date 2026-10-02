@@ -15,6 +15,36 @@ export const createWarehouseApi = async (name: string, location?: string): Promi
   return data;
 };
 
+// Persistent cache for created_at so updates/assignments never alter an item's creation timestamp
+const CREATED_AT_CACHE_KEY = 'gr_products_created_at_registry';
+
+export const getPersistedCreatedAt = (id: string, initialFallback?: string): string => {
+  try {
+    const raw = localStorage.getItem(CREATED_AT_CACHE_KEY);
+    const registry = raw ? JSON.parse(raw) : {};
+    if (registry[id]) {
+      return registry[id];
+    }
+    const val = initialFallback || new Date().toISOString();
+    registry[id] = val;
+    localStorage.setItem(CREATED_AT_CACHE_KEY, JSON.stringify(registry));
+    return val;
+  } catch {
+    return initialFallback || new Date().toISOString();
+  }
+};
+
+export const setPersistedCreatedAt = (id: string, timestamp: string): void => {
+  try {
+    const raw = localStorage.getItem(CREATED_AT_CACHE_KEY);
+    const registry = raw ? JSON.parse(raw) : {};
+    if (!registry[id]) {
+      registry[id] = timestamp;
+      localStorage.setItem(CREATED_AT_CACHE_KEY, JSON.stringify(registry));
+    }
+  } catch {}
+};
+
 // Products
 export const fetchProducts = async (warehouseId: string): Promise<Product[]> => {
   const { data, error } = await supabase
@@ -24,24 +54,38 @@ export const fetchProducts = async (warehouseId: string): Promise<Product[]> => 
 
   if (error) throw error;
   
-  return (data || []).map((p: any) => ({
-    id: p.id,
-    warehouseId: p.warehouse_id,
-    name: p.name || 'Unnamed Asset',
-    nameZh: p.name_zh || '', 
-    sku: p.sku || 'N/A',
-    category: p.category || 'Uncategorized',
-    quantity: p.quantity || 0,
-    price: p.price || 0,
-    minStock: p.min_stock || 0,
-    description: p.description || '',
-    lastUpdated: p.last_updated || p.created_at || new Date().toISOString(),
-    createdAt: p.created_at || p.last_updated || new Date().toISOString(),
-    imageUrl: p.image_url
-  }));
+  return (data || []).map((p: any) => {
+    let createdAt = p.created_at;
+    if (createdAt) {
+      setPersistedCreatedAt(p.id, createdAt);
+    } else {
+      // If database lacks created_at column, lock onto the permanently cached creation time for this ID
+      createdAt = getPersistedCreatedAt(p.id, p.last_updated);
+    }
+
+    return {
+      id: p.id,
+      warehouseId: p.warehouse_id,
+      name: p.name || 'Unnamed Asset',
+      nameZh: p.name_zh || '', 
+      sku: p.sku || 'N/A',
+      category: p.category || 'Uncategorized',
+      quantity: p.quantity || 0,
+      price: p.price || 0,
+      minStock: p.min_stock || 0,
+      description: p.description || '',
+      lastUpdated: p.last_updated || createdAt || new Date().toISOString(),
+      createdAt: createdAt,
+      imageUrl: p.image_url
+    };
+  });
 };
 
 export const upsertProduct = async (product: Product): Promise<void> => {
+  if (product.createdAt) {
+    setPersistedCreatedAt(product.id, product.createdAt);
+  }
+
   const dbRecord: any = {
     id: product.id,
     warehouse_id: product.warehouseId,
