@@ -17,29 +17,12 @@ export const createWarehouseApi = async (name: string, location?: string): Promi
 
 // Products
 export const fetchProducts = async (warehouseId: string): Promise<Product[]> => {
-  let data: any[] | null = null;
-  
-  const res = await supabase
+  const { data, error } = await supabase
     .from('products')
     .select('*')
-    .eq('warehouse_id', warehouseId)
-    .order('created_at', { ascending: false });
+    .eq('warehouse_id', warehouseId);
 
-  if (res.error) {
-    // If order by created_at fails (e.g. column does not exist in schema), fallback to basic select
-    if (res.error.message?.includes('created_at') || res.error.code === '42703') {
-      const fallbackRes = await supabase
-        .from('products')
-        .select('*')
-        .eq('warehouse_id', warehouseId);
-      if (fallbackRes.error) throw fallbackRes.error;
-      data = fallbackRes.data;
-    } else {
-      throw res.error;
-    }
-  } else {
-    data = res.data;
-  }
+  if (error) throw error;
   
   return (data || []).map((p: any) => ({
     id: p.id,
@@ -78,7 +61,15 @@ export const upsertProduct = async (product: Product): Promise<void> => {
     dbRecord.created_at = product.createdAt;
   }
 
-  const { error } = await supabase.from('products').upsert(dbRecord);
+  let { error } = await supabase.from('products').upsert(dbRecord);
+  
+  // If PostgREST schema cache does not have created_at column, retry without it
+  if (error && error.message?.includes('created_at')) {
+    delete dbRecord.created_at;
+    const retry = await supabase.from('products').upsert(dbRecord);
+    error = retry.error;
+  }
+
   if (error) throw error;
 };
 
