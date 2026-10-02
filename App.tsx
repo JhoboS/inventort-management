@@ -171,76 +171,176 @@ const App: React.FC = () => {
   };
 
   const handleSaveProduct = async (product: Product) => {
+    const existing = products.find(p => p.id === product.id);
+    const isNew = !existing;
+    const productToSave: Product = {
+      ...product, 
+      warehouseId: activeWarehouseId,
+      createdAt: existing?.createdAt || product.createdAt || new Date().toISOString()
+    };
+
+    // Instant UI update
+    if (isNew) {
+      setProducts(prev => [productToSave, ...prev]);
+    } else {
+      setProducts(prev => prev.map(p => p.id === product.id ? productToSave : p));
+    }
+    setEditingProduct(undefined);
+
+    const logItem: StockLog = {
+      id: crypto.randomUUID(),
+      warehouseId: activeWarehouseId,
+      action: isNew ? 'CREATE' : 'UPDATE',
+      productName: product.name,
+      quantity: product.quantity,
+      performedBy: session.user.email,
+      date: new Date().toISOString(),
+      details: isNew ? `Initial creation with ${product.quantity} units.` : 'Metadata or stock updated via editor.'
+    };
+    setStockLogs(prev => [logItem, ...prev]);
+
     try {
-      const existing = products.find(p => p.id === product.id);
-      const isNew = !existing;
-      await upsertProduct({ 
-        ...product, 
-        warehouseId: activeWarehouseId,
-        createdAt: existing?.createdAt || product.createdAt || new Date().toISOString()
-      });
-      await addStockLogApi({
-        id: crypto.randomUUID(),
-        warehouseId: activeWarehouseId,
-        action: isNew ? 'CREATE' : 'UPDATE',
-        productName: product.name,
-        quantity: product.quantity,
-        performedBy: session.user.email,
-        date: new Date().toISOString(),
-        details: isNew ? `Initial creation with ${product.quantity} units.` : 'Metadata or stock updated via editor.'
-      });
-      await loadData();
+      await Promise.all([
+        upsertProduct(productToSave),
+        addStockLogApi(logItem)
+      ]);
     } catch (error: any) { 
-        alert(`Failed: ${error.message}`); 
+      alert(`Failed: ${error.message}`); 
+      await loadData();
     }
   };
 
   const handleStockOperation = async (data: any) => {
     const { productId, quantity, type, employeeId, employeeName, reason, productName, productNameZh } = data;
-    try {
-      const product = products.find(p => p.id === productId);
-      if (!product) return;
-      const newQuantity = type === 'INBOUND' ? product.quantity + quantity : Math.max(0, product.quantity - quantity);
-      await upsertProduct({ 
-        ...product, 
-        quantity: newQuantity, 
-        lastUpdated: new Date().toISOString(),
-        createdAt: product.createdAt
-      });
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
 
-      if (type === 'ASSIGN') {
-        await addAssignmentApi({ id: crypto.randomUUID(), warehouseId: activeWarehouseId, productId, productName, productNameZh: productNameZh || '', employeeId, employeeName, quantity, assignedDate: new Date().toISOString(), status: 'Active', performedBy: session.user.email });
-        await addStockLogApi({ id: crypto.randomUUID(), warehouseId: activeWarehouseId, action: 'ASSIGN', productName, quantity, performedBy: session.user.email, date: new Date().toISOString(), details: `Assigned to ${employeeName}` });
-      } else if (type === 'SCRAP') {
-        await addScrappedItemApi({ id: crypto.randomUUID(), warehouseId: activeWarehouseId, productId, productName, productNameZh: productNameZh || '', quantity, reason, scrappedDate: new Date().toISOString(), performedBy: session.user.email });
-        await addStockLogApi({ id: crypto.randomUUID(), warehouseId: activeWarehouseId, action: 'SCRAP', productName, quantity, performedBy: session.user.email, date: new Date().toISOString(), details: `Reason: ${reason}` });
-      } else if (type === 'INBOUND') {
-         await addStockLogApi({ id: crypto.randomUUID(), warehouseId: activeWarehouseId, action: 'INBOUND', productName: product.name, quantity, performedBy: session.user.email, date: new Date().toISOString() });
-      }
+    const newQuantity = type === 'INBOUND' ? product.quantity + quantity : Math.max(0, product.quantity - quantity);
+    const updatedProduct: Product = {
+      ...product, 
+      quantity: newQuantity, 
+      lastUpdated: new Date().toISOString(),
+      createdAt: product.createdAt
+    };
+
+    // Instant UI update
+    setProducts(prev => prev.map(p => p.id === productId ? updatedProduct : p));
+
+    const logItem: StockLog = {
+      id: crypto.randomUUID(),
+      warehouseId: activeWarehouseId,
+      action: type,
+      productName: product.name,
+      quantity,
+      performedBy: session.user.email,
+      date: new Date().toISOString(),
+      details: type === 'ASSIGN' ? `Assigned to ${employeeName}` : type === 'SCRAP' ? `Reason: ${reason}` : 'Inbound stock added'
+    };
+    setStockLogs(prev => [logItem, ...prev]);
+
+    const tasks: Promise<any>[] = [
+      upsertProduct(updatedProduct),
+      addStockLogApi(logItem)
+    ];
+
+    if (type === 'ASSIGN') {
+      const newAssignment: Assignment = {
+        id: crypto.randomUUID(),
+        warehouseId: activeWarehouseId,
+        productId,
+        productName,
+        productNameZh: productNameZh || '',
+        employeeId,
+        employeeName,
+        quantity,
+        assignedDate: new Date().toISOString(),
+        status: 'Active',
+        performedBy: session.user.email
+      };
+      setAssignments(prev => [newAssignment, ...prev]);
+      tasks.push(addAssignmentApi(newAssignment));
+    } else if (type === 'SCRAP') {
+      const newScrap: ScrappedItem = {
+        id: crypto.randomUUID(),
+        warehouseId: activeWarehouseId,
+        productId,
+        productName,
+        productNameZh: productNameZh || '',
+        quantity,
+        reason,
+        scrappedDate: new Date().toISOString(),
+        performedBy: session.user.email
+      };
+      setScrappedItems(prev => [newScrap, ...prev]);
+      tasks.push(addScrappedItemApi(newScrap));
+    }
+
+    try {
+      await Promise.all(tasks);
+    } catch (error: any) { 
+      alert(error.message); 
       await loadData();
-    } catch (error: any) { alert(error.message); }
+    }
   };
 
   const handleReturnAsset = async (assignment: Assignment) => {
-      try {
-        const product = products.find(p => p.id === assignment.productId);
-        if (product) await upsertProduct({ 
-          ...product, 
-          quantity: product.quantity + assignment.quantity, 
-          lastUpdated: new Date().toISOString(),
-          createdAt: product.createdAt
-        });
-        await returnAssignmentApi(assignment.id);
-        await addStockLogApi({ id: crypto.randomUUID(), warehouseId: activeWarehouseId, action: 'RETURN', productName: assignment.productName, quantity: assignment.quantity, performedBy: session.user.email, date: new Date().toISOString(), details: `Returned from ${assignment.employeeName}` });
-        await loadData();
-      } catch (error: any) { alert(error.message); }
+    const product = products.find(p => p.id === assignment.productId);
+    if (!product) return;
+
+    const updatedProduct: Product = {
+      ...product, 
+      quantity: product.quantity + assignment.quantity, 
+      lastUpdated: new Date().toISOString(),
+      createdAt: product.createdAt
+    };
+
+    // Instant UI update
+    setProducts(prev => prev.map(p => p.id === product.id ? updatedProduct : p));
+    setAssignments(prev => prev.map(a => a.id === assignment.id ? { ...a, status: 'Returned' } : a));
+
+    const logItem: StockLog = {
+      id: crypto.randomUUID(),
+      warehouseId: activeWarehouseId,
+      action: 'RETURN',
+      productName: assignment.productName,
+      quantity: assignment.quantity,
+      performedBy: session.user.email,
+      date: new Date().toISOString(),
+      details: `Returned from ${assignment.employeeName}`
+    };
+    setStockLogs(prev => [logItem, ...prev]);
+
+    try {
+      await Promise.all([
+        upsertProduct(updatedProduct),
+        returnAssignmentApi(assignment.id),
+        addStockLogApi(logItem)
+      ]);
+    } catch (error: any) { 
+      alert(error.message); 
+      await loadData();
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    setProducts(prev => prev.filter(p => p.id !== id));
+    try {
+      await deleteProductApi(id);
+    } catch (error: any) { 
+      alert(error.message); 
+      await loadData();
+    }
   };
 
   const handleAddEmployee = async (newEmployee: Employee) => {
+    const employeeWithWh: Employee = { ...newEmployee, warehouseId: activeWarehouseId };
+    setEmployees(prev => [employeeWithWh, ...prev]);
     try {
-      await addEmployeeApi({ ...newEmployee, warehouseId: activeWarehouseId });
+      await addEmployeeApi(employeeWithWh);
+    } catch (error: any) { 
+      alert(error.message); 
       await loadData();
-    } catch (error: any) { alert(error.message); }
+    }
   };
 
   const handleLogout = async () => { await supabase.auth.signOut(); };
@@ -361,7 +461,7 @@ const App: React.FC = () => {
             ) : (
               <div className="pb-10">
                 {currentView === 'dashboard' && <Dashboard products={products} />}
-                {currentView === 'inventory' && <Inventory products={products} categories={categories} assignments={assignments} scrappedItems={scrappedItems} logs={stockLogs} onAddProduct={() => { setEditingProduct(undefined); setIsProductModalOpen(true); }} onEditProduct={(p) => { setEditingProduct(p); setIsProductModalOpen(true); }} onDeleteProduct={deleteProductApi} onInbound={() => { setStockOpType('INBOUND'); setSelectedStockProduct(undefined); setIsStockOpModalOpen(true); }} onAssign={(p) => { setStockOpType('ASSIGN'); setSelectedStockProduct(p); setIsStockOpModalOpen(true); }} onScrap={(p) => { setStockOpType('SCRAP'); setSelectedStockProduct(p); setIsStockOpModalOpen(true); }} />}
+                {currentView === 'inventory' && <Inventory products={products} categories={categories} assignments={assignments} scrappedItems={scrappedItems} logs={stockLogs} onAddProduct={() => { setEditingProduct(undefined); setIsProductModalOpen(true); }} onEditProduct={(p) => { setEditingProduct(p); setIsProductModalOpen(true); }} onDeleteProduct={handleDeleteProduct} onInbound={() => { setStockOpType('INBOUND'); setSelectedStockProduct(undefined); setIsStockOpModalOpen(true); }} onAssign={(p) => { setStockOpType('ASSIGN'); setSelectedStockProduct(p); setIsStockOpModalOpen(true); }} onScrap={(p) => { setStockOpType('SCRAP'); setSelectedStockProduct(p); setIsStockOpModalOpen(true); }} />}
                 {currentView === 'employees' && <Employees employees={employees} assignments={assignments} products={products} onAddEmployee={handleAddEmployee} onReturnAsset={handleReturnAsset} />}
                 {currentView === 'logs' && <Logs logs={stockLogs} />}
                 {currentView === 'settings' && <Settings categories={categories} products={products} assignments={assignments} employees={employees} scrappedItems={scrappedItems} showRepairModal={isSqlRepairOpen} onCloseRepairModal={() => setIsSqlRepairOpen(false)} onAddCategory={async (c) => {

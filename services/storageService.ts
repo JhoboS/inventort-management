@@ -45,6 +45,10 @@ export const setPersistedCreatedAt = (id: string, timestamp: string): void => {
   } catch {}
 };
 
+// Tracks whether database schema has created_at column.
+// Defaults to false to avoid wasted failed roundtrips on every upsert
+let hasCreatedAtColumnInDb = false;
+
 // Products
 export const fetchProducts = async (warehouseId: string): Promise<Product[]> => {
   const { data, error } = await supabase
@@ -57,6 +61,7 @@ export const fetchProducts = async (warehouseId: string): Promise<Product[]> => 
   return (data || []).map((p: any) => {
     let createdAt = p.created_at;
     if (createdAt) {
+      hasCreatedAtColumnInDb = true;
       setPersistedCreatedAt(p.id, createdAt);
     } else {
       // If database lacks created_at column, lock onto the permanently cached creation time for this ID
@@ -101,14 +106,15 @@ export const upsertProduct = async (product: Product): Promise<void> => {
     image_url: product.imageUrl
   };
 
-  if (product.createdAt) {
+  if (hasCreatedAtColumnInDb && product.createdAt) {
     dbRecord.created_at = product.createdAt;
   }
 
   let { error } = await supabase.from('products').upsert(dbRecord);
   
-  // If PostgREST schema cache does not have created_at column, retry without it
+  // If PostgREST schema cache does not have created_at column, remember it and retry without it
   if (error && error.message?.includes('created_at')) {
+    hasCreatedAtColumnInDb = false;
     delete dbRecord.created_at;
     const retry = await supabase.from('products').upsert(dbRecord);
     error = retry.error;
