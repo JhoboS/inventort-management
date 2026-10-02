@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Product } from '../types';
-import { X, Sparkles, Loader2, DollarSign, Image as ImageIcon, ChevronDown } from 'lucide-react';
+import { Product, Assignment } from '../types';
+import { X, Sparkles, Loader2, DollarSign, Image as ImageIcon, ChevronDown, ArrowLeftCircle, Users, Package } from 'lucide-react';
 import { generateProductDescription } from '../services/geminiService';
 
 interface ProductModalProps {
@@ -11,9 +11,20 @@ interface ProductModalProps {
   categories: string[];
   product?: Product;
   warehouseId: string;
+  assignments?: Assignment[];
+  onReturnAsset?: (assignment: Assignment) => Promise<void> | void;
 }
 
-const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, categories, product, warehouseId }) => {
+const ProductModal: React.FC<ProductModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  categories, 
+  product, 
+  warehouseId,
+  assignments = [],
+  onReturnAsset
+}) => {
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '',
     nameZh: '',
@@ -26,12 +37,29 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, ca
     imageUrl: ''
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [returningId, setReturningId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const currentProductIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
+    if (!isOpen) {
+      currentProductIdRef.current = undefined;
+      return;
+    }
+
     if (product) {
-      setFormData(product);
+      if (currentProductIdRef.current !== product.id) {
+        setFormData(product);
+        currentProductIdRef.current = product.id;
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          quantity: product.quantity,
+          lastUpdated: product.lastUpdated
+        }));
+      }
     } else {
+      currentProductIdRef.current = undefined;
       setFormData({
         name: '',
         nameZh: '',
@@ -47,6 +75,23 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, ca
   }, [product, isOpen, categories]);
 
   if (!isOpen) return null;
+
+  const activeAssignments = product 
+    ? assignments.filter(a => a.productId === product.id && a.status === 'Active')
+    : [];
+
+  const totalInUseQuantity = activeAssignments.reduce((acc, a) => acc + a.quantity, 0);
+
+  const handleReturn = async (assign: Assignment) => {
+    if (window.confirm(`Confirm return of ${assign.productName} from ${assign.employeeName}? Stock will increase by ${assign.quantity}.`)) {
+      try {
+        setReturningId(assign.id);
+        await onReturnAsset?.(assign);
+      } finally {
+        setReturningId(null);
+      }
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -257,6 +302,78 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, ca
                 placeholder="Specify hardware specifications or notes..."
               />
             </div>
+
+            {product && (
+              <div className="col-span-1 md:col-span-2 pt-6 border-t border-slate-100">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                      <Users size={18} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                        Current Active Users / 正在使用该物品的人员
+                      </h4>
+                      <p className="text-[11px] text-slate-400">
+                        Staff members currently assigned to this asset
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border ${
+                    totalInUseQuantity > 0 
+                      ? 'bg-blue-50 text-blue-600 border-blue-200' 
+                      : 'bg-slate-50 text-slate-500 border-slate-200'
+                  }`}>
+                    {totalInUseQuantity} In Use ({activeAssignments.length} {activeAssignments.length === 1 ? 'person' : 'people'})
+                  </span>
+                </div>
+
+                {activeAssignments.length > 0 ? (
+                  <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                    {activeAssignments.map(assign => (
+                      <div 
+                        key={assign.id} 
+                        className="bg-slate-50 hover:bg-slate-100/70 p-4 rounded-2xl border border-slate-200 flex items-center justify-between gap-4 transition-all"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-sm flex-shrink-0 shadow-sm">
+                            {assign.employeeName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-sm text-slate-900 truncate">{assign.employeeName}</p>
+                            <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                              <span className="font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">Qty: {assign.quantity}</span>
+                              <span className="text-slate-300">•</span>
+                              <span className="text-slate-400">Assigned: {new Date(assign.assignedDate).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <button 
+                          type="button"
+                          disabled={returningId === assign.id}
+                          onClick={() => handleReturn(assign)}
+                          className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl shadow-sm hover:shadow transition-all flex-shrink-0"
+                        >
+                          {returningId === assign.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <ArrowLeftCircle size={15} />
+                          )}
+                          Return to Inventory
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-7 px-4 bg-slate-50/70 rounded-2xl border border-dashed border-slate-200 text-slate-500">
+                    <Package size={26} className="mx-auto mb-2 opacity-40 text-slate-400" />
+                    <p className="text-xs font-bold text-slate-700">No active users currently assigned</p>
+                    <p className="text-[11px] text-slate-400 mt-1">All {formData.quantity || 0} unit(s) are stored in the warehouse.</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </form>
 

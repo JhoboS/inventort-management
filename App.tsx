@@ -161,6 +161,7 @@ const App: React.FC = () => {
         fetchStockLogs(activeWarehouseId)
       ]);
       setProducts(prod); setAssignments(assign); setScrappedItems(scrap); setEmployees(emp); setCategories(cats); setStockLogs(logs);
+      setEditingProduct(prev => prev ? (prod.find(p => p.id === prev.id) || prev) : undefined);
       setSchemaError(null); 
     } catch (error: any) {
         if (error.message?.includes('column') || error.message?.includes('relation')) {
@@ -366,7 +367,16 @@ const App: React.FC = () => {
         </main>
       </div>
 
-      <ProductModal isOpen={isProductModalOpen} onClose={() => setIsProductModalOpen(false)} onSave={handleSaveProduct} categories={categories} product={editingProduct} warehouseId={activeWarehouseId} />
+      <ProductModal 
+        isOpen={isProductModalOpen} 
+        onClose={() => setIsProductModalOpen(false)} 
+        onSave={handleSaveProduct} 
+        categories={categories} 
+        product={editingProduct} 
+        warehouseId={activeWarehouseId} 
+        assignments={assignments}
+        onReturnAsset={handleReturnAsset}
+      />
       <StockOperationModal isOpen={isStockOpModalOpen} onClose={() => setIsStockOpModalOpen(false)} onSubmit={handleStockOperation} type={stockOpType} products={products} employees={employees} initialProduct={selectedStockProduct} />
     </div>
   );
