@@ -460,7 +460,7 @@ const App: React.FC = () => {
                </div>
             ) : (
               <div className="pb-10">
-                {currentView === 'dashboard' && <Dashboard products={products} />}
+                {currentView === 'dashboard' && <Dashboard products={products} assignments={assignments} />}
                 {currentView === 'inventory' && <Inventory products={products} categories={categories} assignments={assignments} scrappedItems={scrappedItems} logs={stockLogs} onAddProduct={() => { setEditingProduct(undefined); setIsProductModalOpen(true); }} onEditProduct={(p) => { setEditingProduct(p); setIsProductModalOpen(true); }} onDeleteProduct={handleDeleteProduct} onInbound={() => { setStockOpType('INBOUND'); setSelectedStockProduct(undefined); setIsStockOpModalOpen(true); }} onAssign={(p) => { setStockOpType('ASSIGN'); setSelectedStockProduct(p); setIsStockOpModalOpen(true); }} onScrap={(p) => { setStockOpType('SCRAP'); setSelectedStockProduct(p); setIsStockOpModalOpen(true); }} />}
                 {currentView === 'employees' && <Employees employees={employees} assignments={assignments} products={products} onAddEmployee={handleAddEmployee} onReturnAsset={handleReturnAsset} />}
                 {currentView === 'logs' && <Logs logs={stockLogs} />}
