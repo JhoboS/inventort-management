@@ -80,7 +80,8 @@ const Employees: React.FC<EmployeesProps> = ({ employees, assignments, products 
       {/* Directory Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-slide-up">
         {filteredEmployees.map((emp) => {
-        const activeItems = getEmployeeAssignments(emp.id).length;
+        const empAssignments = getEmployeeAssignments(emp.id);
+        const activeItems = empAssignments.reduce((sum, a) => sum + (Number(a.quantity) || 0), 0);
         return (
             <div 
             key={emp.id} 
@@ -114,7 +115,7 @@ const Employees: React.FC<EmployeesProps> = ({ employees, assignments, products 
             <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span className="text-slate-400">Joined {new Date(emp.joinedDate).toLocaleDateString()}</span>
                 <span className={`px-2 py-1 rounded-full font-medium ${activeItems > 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
-                    {activeItems} Active Items
+                    {activeItems} {activeItems === 1 ? 'Active Item' : 'Active Items'}
                 </span>
             </div>
             </div>
@@ -184,9 +185,14 @@ const Employees: React.FC<EmployeesProps> = ({ employees, assignments, products 
             </div>
             
             <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
-              <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <Package className="text-blue-600" />
-                Assigned Assets
+              <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Package className="text-blue-600" />
+                  <span>Assigned Assets</span>
+                </div>
+                <span className="text-xs font-bold px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-full">
+                  {getEmployeeAssignments(selectedEmployee.id).reduce((sum, a) => sum + (Number(a.quantity) || 0), 0)} Total Units
+                </span>
               </h3>
               
               {getEmployeeAssignments(selectedEmployee.id).length > 0 ? (
