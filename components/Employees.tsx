@@ -292,8 +292,8 @@ const Employees: React.FC<EmployeesProps> = ({ employees, assignments, products 
                     const itemTotal = (Number(assign.quantity) || 0) * unitPrice;
 
                     return (
-                      <div key={assign.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center flex-wrap gap-3 hover:border-slate-300 transition-colors">
-                        <div className="flex items-center gap-3.5 min-w-0">
+                      <div key={assign.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-3.5 hover:border-slate-300 transition-colors">
+                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
                           {prod?.imageUrl ? (
                             <img src={prod.imageUrl} alt={assign.productName} className="w-12 h-12 rounded-xl object-cover bg-slate-50 border border-slate-200 flex-shrink-0" />
                           ) : (
@@ -301,16 +301,18 @@ const Employees: React.FC<EmployeesProps> = ({ employees, assignments, products 
                               <ImageIcon size={20} />
                             </div>
                           )}
-                          <div className="min-w-0">
-                            <p className="font-bold text-slate-800 truncate text-sm">{assign.productName}</p>
-                            {assign.productNameZh && <p className="text-xs text-slate-500 truncate">{assign.productNameZh}</p>}
-                            <div className="flex items-center flex-wrap gap-2 text-xs text-slate-400 mt-1">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline gap-2">
+                              <p className="font-bold text-slate-800 truncate text-sm">{assign.productName}</p>
+                              {assign.productNameZh && <span className="text-xs text-slate-400 truncate">({assign.productNameZh})</span>}
+                            </div>
+                            <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 text-xs text-slate-400 mt-1">
                               <span className="font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">Qty: {assign.quantity}</span>
                               <span className="font-semibold text-slate-600">${unitPrice.toFixed(2)}/ea</span>
                               <span>•</span>
                               <span className="font-bold text-emerald-600">${itemTotal.toFixed(2)}</span>
-                              <span>•</span>
-                              <span>Assigned: {new Date(assign.assignedDate).toLocaleDateString()}</span>
+                              <span className="hidden sm:inline">•</span>
+                              <span className="hidden sm:inline text-slate-400">Assigned: {new Date(assign.assignedDate).toLocaleDateString()}</span>
                             </div>
                           </div>
                         </div>
@@ -320,7 +322,7 @@ const Employees: React.FC<EmployeesProps> = ({ employees, assignments, products 
                                   onReturnAsset(assign);
                               }
                           }}
-                          className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-colors flex-shrink-0"
+                          className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-colors flex-shrink-0 whitespace-nowrap active:scale-95"
                         >
                           <ArrowLeftCircle size={14} />
                           Return to Inventory
