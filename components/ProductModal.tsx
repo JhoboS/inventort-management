@@ -1,8 +1,23 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Product, Assignment } from '../types';
-import { X, Sparkles, Loader2, DollarSign, Image as ImageIcon, ChevronDown, ArrowLeftCircle, Users, Package } from 'lucide-react';
+import { X, Sparkles, Loader2, DollarSign, Image as ImageIcon, ChevronDown, ArrowLeftCircle, Users, Package, RotateCcw } from 'lucide-react';
 import { generateProductDescription } from '../services/geminiService';
+
+const DRAFT_PREFIX = 'gr_asset_entry_draft';
+const getDraftKey = (warehouseId: string) => `${DRAFT_PREFIX}_${warehouseId || 'default'}`;
+
+const hasDraftData = (data: Partial<Product>) => {
+  return !!(
+    (data.name && data.name.trim().length > 0) ||
+    (data.nameZh && data.nameZh.trim().length > 0) ||
+    (data.sku && data.sku.trim().length > 0) ||
+    (data.description && data.description.trim().length > 0) ||
+    (data.imageUrl && data.imageUrl.length > 0) ||
+    (data.price !== undefined && data.price > 0) ||
+    (data.quantity !== undefined && data.quantity > 0)
+  );
+};
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -38,9 +53,11 @@ const ProductModal: React.FC<ProductModalProps> = ({
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [returningId, setReturningId] = useState<string | null>(null);
+  const [isDraftRestored, setIsDraftRestored] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const currentProductIdRef = useRef<string | undefined>(undefined);
 
+  // Initialize form or restore draft when opening modal
   useEffect(() => {
     if (!isOpen) {
       currentProductIdRef.current = undefined;
@@ -58,8 +75,34 @@ const ProductModal: React.FC<ProductModalProps> = ({
           lastUpdated: product.lastUpdated
         }));
       }
+      setIsDraftRestored(false);
     } else {
       currentProductIdRef.current = undefined;
+      // For New Asset Entry: check if an unsaved draft was preserved in localStorage
+      try {
+        const savedDraftStr = localStorage.getItem(getDraftKey(warehouseId));
+        if (savedDraftStr) {
+          const parsed = JSON.parse(savedDraftStr);
+          if (parsed && hasDraftData(parsed)) {
+            setFormData({
+              name: parsed.name || '',
+              nameZh: parsed.nameZh || '',
+              sku: parsed.sku || '',
+              category: parsed.category || categories[0] || 'Other',
+              quantity: parsed.quantity ?? 0,
+              price: parsed.price ?? 0,
+              minStock: parsed.minStock ?? 5,
+              description: parsed.description || '',
+              imageUrl: parsed.imageUrl || ''
+            });
+            setIsDraftRestored(true);
+            return;
+          }
+        }
+      } catch (e) {
+        console.error("Failed to restore asset draft:", e);
+      }
+
       setFormData({
         name: '',
         nameZh: '',
@@ -71,8 +114,41 @@ const ProductModal: React.FC<ProductModalProps> = ({
         description: '',
         imageUrl: ''
       });
+      setIsDraftRestored(false);
     }
-  }, [product, isOpen, categories]);
+  }, [product, isOpen, categories, warehouseId]);
+
+  // Auto-save draft changes to localStorage whenever user modifies new asset entry
+  useEffect(() => {
+    if (!isOpen || product) return;
+    try {
+      if (hasDraftData(formData)) {
+        localStorage.setItem(getDraftKey(warehouseId), JSON.stringify(formData));
+      } else {
+        localStorage.removeItem(getDraftKey(warehouseId));
+      }
+    } catch (e) {
+      console.error("Failed to persist asset draft:", e);
+    }
+  }, [formData, isOpen, product, warehouseId]);
+
+  const handleDiscardDraft = () => {
+    try {
+      localStorage.removeItem(getDraftKey(warehouseId));
+    } catch {}
+    setFormData({
+      name: '',
+      nameZh: '',
+      sku: '',
+      category: categories[0] || 'Other',
+      quantity: 0,
+      price: 0,
+      minStock: 5,
+      description: '',
+      imageUrl: ''
+    });
+    setIsDraftRestored(false);
+  };
 
   if (!isOpen) return null;
 
@@ -144,6 +220,15 @@ const ProductModal: React.FC<ProductModalProps> = ({
       imageUrl: formData.imageUrl
     };
     onSave(newProduct);
+
+    // Clear draft on successful creation
+    if (!product) {
+      try {
+        localStorage.removeItem(getDraftKey(warehouseId));
+      } catch {}
+      setIsDraftRestored(false);
+    }
+
     onClose();
   };
 
@@ -153,7 +238,15 @@ const ProductModal: React.FC<ProductModalProps> = ({
         
         <div className="flex items-center justify-between p-6 md:p-8 border-b border-slate-50 bg-slate-50/30">
           <div>
-            <h2 className="text-xl md:text-2xl font-black text-slate-900">{product ? 'Update Asset' : 'New Asset Entry'}</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl md:text-2xl font-black text-slate-900">{product ? 'Update Asset' : 'New Asset Entry'}</h2>
+              {!product && hasDraftData(formData) && (
+                <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Draft Auto-Saved
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-500 font-medium mt-1">Configure your product parameters in the system.</p>
           </div>
           <button onClick={onClose} className="p-2.5 hover:bg-slate-200 rounded-full transition-colors text-slate-400">
@@ -162,6 +255,26 @@ const ProductModal: React.FC<ProductModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 md:p-8 overflow-y-auto space-y-6">
+          {/* Draft Notification & Discard Option for New Asset Entry */}
+          {!product && hasDraftData(formData) && (
+            <div className="flex items-center justify-between px-4 py-2.5 bg-amber-50/80 border border-amber-200/80 rounded-2xl text-xs text-amber-900 animate-fade-in">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0 animate-pulse"></span>
+                <span className="font-bold truncate">
+                  {isDraftRestored ? "Unsaved draft restored." : "Draft auto-saved."} Your progress is preserved if you leave.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleDiscardDraft}
+                className="flex items-center gap-1 font-black uppercase text-[10px] tracking-wider text-amber-700 hover:text-red-600 transition-colors ml-3 px-2 py-1 rounded-lg hover:bg-amber-100 flex-shrink-0"
+                title="Discard all entered fields and start over with a blank form"
+              >
+                <RotateCcw size={12} />
+                Clear Draft
+              </button>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             
             <div className="col-span-1 md:col-span-2">
