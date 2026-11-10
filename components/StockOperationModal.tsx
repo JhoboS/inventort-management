@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Product, OperationType, Employee } from '../types';
-import { X, ArrowDownCircle, UserPlus, Trash2, Search, ChevronDown } from 'lucide-react';
+import { X, ArrowDownCircle, UserPlus, Trash2, Search, ChevronDown, Image as ImageIcon } from 'lucide-react';
 
 interface StockOperationModalProps {
   isOpen: boolean;
@@ -21,6 +21,7 @@ const StockOperationModal: React.FC<StockOperationModalProps> = ({
   const [employeeId, setEmployeeId] = useState('');
   const [reason, setReason] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const selectedProduct = products.find(p => p.id === selectedProductId);
 
@@ -35,6 +36,7 @@ const StockOperationModal: React.FC<StockOperationModalProps> = ({
     setQuantity(1);
     setEmployeeId('');
     setReason('');
+    setIsSearchFocused(false);
   }, [initialProduct, isOpen, type]);
 
   if (!isOpen) return null;
@@ -125,46 +127,137 @@ const StockOperationModal: React.FC<StockOperationModalProps> = ({
           {/* Product Selection */}
           <div className="space-y-2">
             <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Select Product</label>
-            {!initialProduct ? (
-              <div className="relative">
-                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type="text"
-                  placeholder="Search product (EN/CN)..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setSelectedProductId(''); // Reset selection on search change
-                  }}
-                  className="w-full pl-12 pr-5 py-3.5 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-slate-50/50 text-sm font-bold transition-all"
-                />
-                {searchTerm && !selectedProductId && filteredProducts.length > 0 && (
-                  <div className="absolute z-10 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-48 overflow-y-auto">
-                    {filteredProducts.map(p => (
-                      <div
-                        key={p.id}
-                        onClick={() => {
-                          setSelectedProductId(p.id);
-                          setSearchTerm(p.name);
-                        }}
-                        className="px-5 py-3 hover:bg-slate-50 cursor-pointer flex justify-between items-center transition-colors"
-                      >
-                        <div className="overflow-hidden">
-                            <span className="font-bold text-slate-700 truncate block text-sm">{p.name}</span>
-                            <span className="text-xs text-slate-400 font-medium block">{p.nameZh}</span>
-                        </div>
-                        <span className="text-[10px] font-black text-slate-400 whitespace-nowrap bg-slate-100 px-2 py-1 rounded-md">QTY: {p.quantity}</span>
-                      </div>
-                    ))}
+            
+            {/* If product is selected, display rich card with photo and change button */}
+            {selectedProduct ? (
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-3 shadow-sm">
+                <div className="flex items-center gap-3 min-w-0">
+                  {selectedProduct.imageUrl ? (
+                    <img 
+                      src={selectedProduct.imageUrl} 
+                      alt={selectedProduct.name} 
+                      className="w-12 h-12 rounded-xl object-cover bg-white border border-slate-200 flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 flex-shrink-0">
+                      <ImageIcon size={20} />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-800 text-sm truncate">{selectedProduct.name}</p>
+                    <p className="text-xs text-slate-500 truncate">{selectedProduct.nameZh || 'No Chinese name'}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-mono text-slate-400">SKU: {selectedProduct.sku}</span>
+                      <span className="text-[10px] font-bold text-emerald-600">${selectedProduct.price}/ea</span>
+                    </div>
                   </div>
-                )}
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="text-right">
+                    <span className="text-[9px] font-black uppercase text-slate-400 block">Available</span>
+                    <span className={`text-xs font-black px-2 py-0.5 rounded-md ${selectedProduct.quantity <= selectedProduct.minStock ? 'bg-red-50 text-red-600' : 'bg-slate-200 text-slate-700'}`}>
+                      {selectedProduct.quantity}
+                    </span>
+                  </div>
+                  {!initialProduct && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedProductId('');
+                        setSearchTerm('');
+                        setIsSearchFocused(true);
+                      }}
+                      className="px-2.5 py-1 text-xs font-bold text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors"
+                    >
+                      Change
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
-              <div className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 font-bold text-sm flex justify-between items-center">
-                <div className="truncate">
-                  {initialProduct.name} <span className="text-sm font-medium text-slate-500 ml-1">({initialProduct.nameZh})</span>
-                </div>
-                <span className="text-[10px] font-black text-slate-400 whitespace-nowrap bg-slate-200/50 px-2.5 py-1 rounded-md">QTY: {initialProduct.quantity}</span>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input
+                  type="text"
+                  placeholder="Type to search asset by Name, CN, or SKU..."
+                  value={searchTerm}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setSelectedProductId('');
+                    setIsSearchFocused(true);
+                  }}
+                  className="w-full pl-11 pr-10 py-3.5 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-slate-50/50 text-sm font-bold transition-all"
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setSelectedProductId('');
+                    }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+
+                {/* Search Results Dropdown with Photos */}
+                {(searchTerm || isSearchFocused) && !selectedProductId && (
+                  <div className="absolute z-20 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl max-h-60 overflow-y-auto divide-y divide-slate-100">
+                    {filteredProducts.length > 0 ? (
+                      filteredProducts.map(p => (
+                        <div
+                          key={p.id}
+                          onClick={() => {
+                            setSelectedProductId(p.id);
+                            setSearchTerm(p.name);
+                            setIsSearchFocused(false);
+                          }}
+                          className="p-3 hover:bg-blue-50/60 cursor-pointer flex items-center justify-between gap-3 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            {p.imageUrl ? (
+                              <img 
+                                src={p.imageUrl} 
+                                alt={p.name} 
+                                className="w-11 h-11 rounded-xl object-cover bg-slate-50 border border-slate-200 flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 flex-shrink-0">
+                                <ImageIcon size={18} />
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <span className="font-bold text-slate-800 truncate block text-sm leading-tight">{p.name}</span>
+                              <span className="text-xs text-slate-400 font-medium block truncate mt-0.5">{p.nameZh || 'No Chinese name'}</span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[9px] font-mono text-slate-400">SKU: {p.sku}</span>
+                                <span className="text-[9px] font-bold uppercase bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
+                                  {p.category}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="text-right flex-shrink-0">
+                            <span className={`text-[10px] font-black whitespace-nowrap px-2 py-0.5 rounded-md block ${p.quantity <= p.minStock ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600'}`}>
+                              QTY: {p.quantity}
+                            </span>
+                            <span className="text-[10px] text-emerald-600 font-bold block mt-1">
+                              ${p.price}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                        No products match &ldquo;{searchTerm}&rdquo;
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

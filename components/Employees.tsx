@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { Employee, Assignment, Product } from '../types';
-import { User, Mail, Briefcase, Plus, Search, Calendar, Package, X, ChevronRight, Box, Tag, ArrowLeftCircle, Image as ImageIcon } from 'lucide-react';
+import { User, Mail, Briefcase, Plus, Search, Calendar, Package, X, ChevronRight, Box, Tag, ArrowLeftCircle, Image as ImageIcon, FileSpreadsheet, FileText, Download, Loader2 } from 'lucide-react';
+import { exportEmployeeAssetsToExcel, exportEmployeeAssetsToPdf } from '../services/exportService';
 
 interface EmployeesProps {
   employees: Employee[];
@@ -15,6 +16,8 @@ const Employees: React.FC<EmployeesProps> = ({ employees, assignments, products 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   // New Employee Form State
   const [newEmployee, setNewEmployee] = useState<Partial<Employee>>({
@@ -49,6 +52,35 @@ const Employees: React.FC<EmployeesProps> = ({ employees, assignments, products 
   const getEmployeeAssignments = (empId: string) => {
     return assignments.filter(a => a.employeeId === empId && a.status === 'Active');
   };
+
+  const handleExportExcel = (emp: Employee) => {
+    try {
+      setIsExportingExcel(true);
+      exportEmployeeAssetsToExcel(emp, assignments, products);
+    } catch (err: any) {
+      alert(`Export to Excel failed: ${err.message}`);
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
+  const handleExportPdf = async (emp: Employee) => {
+    try {
+      setIsExportingPdf(true);
+      await exportEmployeeAssetsToPdf(emp, assignments, products);
+    } catch (err: any) {
+      alert(`Generate PDF failed: ${err.message}`);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const selectedEmpAssignments = selectedEmployee ? getEmployeeAssignments(selectedEmployee.id) : [];
+  const selectedEmpTotalUnits = selectedEmpAssignments.reduce((sum, a) => sum + (Number(a.quantity) || 0), 0);
+  const selectedEmpValuation = selectedEmpAssignments.reduce((sum, a) => {
+    const prod = products.find(p => p.id === a.productId || p.name === a.productName);
+    return sum + (Number(a.quantity) || 0) * (prod?.price ?? 0);
+  }, 0);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -166,54 +198,117 @@ const Employees: React.FC<EmployeesProps> = ({ employees, assignments, products 
 
       {/* Employee Profile Modal */}
       {selectedEmployee && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden max-h-[80vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden max-h-[85vh] flex flex-col mx-4">
+            
+            {/* Modal Header */}
             <div className="p-6 bg-slate-900 text-white flex justify-between items-start">
                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-2xl font-bold">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-2xl font-black shadow-lg">
                     {selectedEmployee.name.charAt(0)}
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold">{selectedEmployee.name}</h2>
-                    <p className="text-slate-300">{selectedEmployee.role} • {selectedEmployee.department}</p>
+                    <p className="text-slate-300 text-sm font-medium">{selectedEmployee.role} • {selectedEmployee.department}</p>
                     <p className="text-xs text-slate-400 mt-1">{selectedEmployee.email}</p>
                   </div>
                </div>
-               <button onClick={() => setSelectedEmployee(null)} className="text-slate-400 hover:text-white">
-                <X size={24} />
-              </button>
+               
+               <div className="flex items-center gap-4">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Held Valuation</p>
+                    <p className="text-xl font-black text-emerald-400">
+                      ${selectedEmpValuation.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-[10px] text-slate-400">{selectedEmpTotalUnits} units active</p>
+                  </div>
+                  <button onClick={() => setSelectedEmployee(null)} className="text-slate-400 hover:text-white transition-colors p-1">
+                    <X size={24} />
+                  </button>
+               </div>
+            </div>
+
+            {/* Quick Export Action Bar */}
+            <div className="bg-slate-100 border-b border-slate-200 px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-600">Export Asset List:</span>
+                <span className="text-[11px] text-slate-500 font-medium">({selectedEmpAssignments.length} unique items, {selectedEmpTotalUnits} units)</span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleExportExcel(selectedEmployee)}
+                  disabled={isExportingExcel}
+                  className="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                  title="Download held assets list as Excel file (.xlsx)"
+                >
+                  {isExportingExcel ? (
+                    <Loader2 size={15} className="animate-spin text-emerald-600" />
+                  ) : (
+                    <FileSpreadsheet size={15} className="text-emerald-600" />
+                  )}
+                  <span>Export Excel</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleExportPdf(selectedEmployee)}
+                  disabled={isExportingPdf}
+                  className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-blue-500/20 active:scale-95 disabled:opacity-50"
+                  title="Generate and download official PDF Handover Slip with photos and signatures"
+                >
+                  {isExportingPdf ? (
+                    <Loader2 size={15} className="animate-spin text-white" />
+                  ) : (
+                    <FileText size={15} className="text-white" />
+                  )}
+                  <span>Generate PDF</span>
+                </button>
+              </div>
             </div>
             
+            {/* Modal Body */}
             <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
-              <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Package className="text-blue-600" />
-                  <span>Assigned Assets</span>
+                  <Package className="text-blue-600" size={20} />
+                  <span>Currently Held Assets</span>
                 </div>
-                <span className="text-xs font-bold px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-full">
-                  {getEmployeeAssignments(selectedEmployee.id).reduce((sum, a) => sum + (Number(a.quantity) || 0), 0)} Total Units
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                    {selectedEmpTotalUnits} Total Units
+                  </span>
+                  <span className="text-xs font-bold px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">
+                    ${selectedEmpValuation.toFixed(2)} Total
+                  </span>
+                </div>
               </h3>
               
-              {getEmployeeAssignments(selectedEmployee.id).length > 0 ? (
+              {selectedEmpAssignments.length > 0 ? (
                 <div className="space-y-3">
-                  {getEmployeeAssignments(selectedEmployee.id).map(assign => {
-                    const prod = products.find(p => p.id === assign.productId);
+                  {selectedEmpAssignments.map(assign => {
+                    const prod = products.find(p => p.id === assign.productId || p.name === assign.productName);
+                    const unitPrice = prod?.price ?? 0;
+                    const itemTotal = (Number(assign.quantity) || 0) * unitPrice;
+
                     return (
-                      <div key={assign.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center flex-wrap gap-3">
+                      <div key={assign.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center flex-wrap gap-3 hover:border-slate-300 transition-colors">
                         <div className="flex items-center gap-3.5 min-w-0">
                           {prod?.imageUrl ? (
-                            <img src={prod.imageUrl} alt={assign.productName} className="w-12 h-12 rounded-xl object-cover bg-slate-50 border border-slate-100 flex-shrink-0" />
+                            <img src={prod.imageUrl} alt={assign.productName} className="w-12 h-12 rounded-xl object-cover bg-slate-50 border border-slate-200 flex-shrink-0" />
                           ) : (
                             <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 flex-shrink-0">
                               <ImageIcon size={20} />
                             </div>
                           )}
                           <div className="min-w-0">
-                            <p className="font-bold text-slate-800 truncate">{assign.productName}</p>
+                            <p className="font-bold text-slate-800 truncate text-sm">{assign.productName}</p>
                             {assign.productNameZh && <p className="text-xs text-slate-500 truncate">{assign.productNameZh}</p>}
-                            <div className="flex items-center gap-2.5 text-xs text-slate-400 mt-1">
-                              <span className="font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">Qty: {assign.quantity}</span>
+                            <div className="flex items-center flex-wrap gap-2 text-xs text-slate-400 mt-1">
+                              <span className="font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">Qty: {assign.quantity}</span>
+                              <span className="font-semibold text-slate-600">${unitPrice.toFixed(2)}/ea</span>
+                              <span>•</span>
+                              <span className="font-bold text-emerald-600">${itemTotal.toFixed(2)}</span>
                               <span>•</span>
                               <span>Assigned: {new Date(assign.assignedDate).toLocaleDateString()}</span>
                             </div>
@@ -225,7 +320,7 @@ const Employees: React.FC<EmployeesProps> = ({ employees, assignments, products 
                                   onReturnAsset(assign);
                               }
                           }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors flex-shrink-0"
+                          className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-colors flex-shrink-0"
                         >
                           <ArrowLeftCircle size={14} />
                           Return to Inventory
@@ -235,9 +330,10 @@ const Employees: React.FC<EmployeesProps> = ({ employees, assignments, products 
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8 text-slate-500 bg-white rounded-lg border border-dashed border-slate-300">
-                  <Package size={32} className="mx-auto mb-2 opacity-50" />
-                  <p>No items currently assigned.</p>
+                <div className="text-center py-10 text-slate-500 bg-white rounded-2xl border border-dashed border-slate-300">
+                  <Package size={36} className="mx-auto mb-2 text-slate-300" />
+                  <p className="font-bold text-slate-600">No assets currently assigned</p>
+                  <p className="text-xs text-slate-400 mt-1">You can still export a clearance slip using the buttons above.</p>
                 </div>
               )}
             </div>

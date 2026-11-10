@@ -1,13 +1,14 @@
 
 import React, { useState } from 'react';
-import { Assignment } from '../types';
-import { User, Calendar, Tag, Search, Box, UserCheck } from 'lucide-react';
+import { Assignment, Product } from '../types';
+import { User, Calendar, Tag, Search, Box, UserCheck, Image as ImageIcon } from 'lucide-react';
 
 interface AssignmentsProps {
   assignments: Assignment[];
+  products?: Product[];
 }
 
-const Assignments: React.FC<AssignmentsProps> = ({ assignments }) => {
+const Assignments: React.FC<AssignmentsProps> = ({ assignments, products = [] }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredAssignments = assignments.filter(a => 
@@ -32,12 +33,14 @@ const Assignments: React.FC<AssignmentsProps> = ({ assignments }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredAssignments.length > 0 ? (
-          filteredAssignments.map((assignment) => (
+          filteredAssignments.map((assignment) => {
+            const prod = products.find(p => p.id === assignment.productId || p.name === assignment.productName);
+            return (
             <div key={assignment.id} className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center">
-                    <User size={20} />
+                  <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center font-bold">
+                    {assignment.employeeName.charAt(0)}
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-800">{assignment.employeeName}</h3>
@@ -52,9 +55,18 @@ const Assignments: React.FC<AssignmentsProps> = ({ assignments }) => {
               </div>
               
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Box size={16} className="text-slate-400" />
-                  <span className="font-medium">{assignment.productName}</span>
+                <div className="flex items-center gap-3 text-sm text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                  {prod?.imageUrl ? (
+                    <img src={prod.imageUrl} alt={assignment.productName} className="w-10 h-10 rounded-lg object-cover bg-white border border-slate-200 flex-shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400 flex-shrink-0">
+                      <ImageIcon size={18} />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <span className="font-bold text-slate-800 block truncate">{assignment.productName}</span>
+                    {assignment.productNameZh && <span className="text-xs text-slate-400 block truncate">{assignment.productNameZh}</span>}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2 text-slate-500">
@@ -73,7 +85,8 @@ const Assignments: React.FC<AssignmentsProps> = ({ assignments }) => {
                 </div>
               </div>
             </div>
-          ))
+            );
+          })
         ) : (
           <div className="col-span-full py-12 text-center text-slate-500">
             <User size={48} className="mx-auto mb-3 text-slate-200" />

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Product, Assignment, ScrappedItem, StockLog } from '../types';
-import { Edit, Trash2, Search, Filter, Plus, AlertCircle, ArrowDownCircle, UserPlus, Package, Box, Image as ImageIcon, ChevronDown, ArrowUpDown } from 'lucide-react';
+import { Edit, Trash2, Search, Filter, Plus, AlertCircle, ArrowDownCircle, UserPlus, Package, Box, Image as ImageIcon, ChevronDown, ArrowUpDown, X } from 'lucide-react';
 
 interface InventoryProps {
   products: Product[];
@@ -23,6 +23,7 @@ const Inventory: React.FC<InventoryProps> = ({
   onInbound, onAssign, onScrap
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('All');
   const [sortBy, setSortBy] = useState<'created_desc' | 'created_asc' | 'updated_desc' | 'name_asc'>('created_desc');
 
@@ -132,9 +133,96 @@ const Inventory: React.FC<InventoryProps> = ({
               type="text" 
               placeholder="Search assets (EN/CN) or SKU..." 
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all text-sm"
+              onFocus={() => setIsSearchFocused(true)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setIsSearchFocused(true);
+              }}
+              className="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all text-sm font-medium"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                title="Clear search"
+              >
+                <X size={16} />
+              </button>
+            )}
+
+            {/* Quick Live Search Results Preview with Photos */}
+            {isSearchFocused && searchTerm.trim().length > 0 && (
+              <div className="absolute left-0 top-full mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-2xl z-30 overflow-hidden animate-fade-in max-h-80 overflow-y-auto">
+                <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                  <span>Matching Assets ({filteredProducts.length})</span>
+                  <button 
+                    type="button" 
+                    onClick={() => setIsSearchFocused(false)}
+                    className="hover:text-slate-600 text-[10px] font-bold"
+                  >
+                    Close Preview
+                  </button>
+                </div>
+
+                {filteredProducts.length > 0 ? (
+                  <div className="divide-y divide-slate-100">
+                    {filteredProducts.slice(0, 8).map(p => (
+                      <div
+                        key={p.id}
+                        onClick={() => {
+                          setSearchTerm(p.name);
+                          setIsSearchFocused(false);
+                        }}
+                        className="p-3 hover:bg-blue-50/50 cursor-pointer flex items-center justify-between gap-3 transition-colors group"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {p.imageUrl ? (
+                            <img 
+                              src={p.imageUrl} 
+                              alt={p.name} 
+                              className="w-11 h-11 rounded-xl object-cover bg-slate-50 border border-slate-200 flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 flex-shrink-0">
+                              <ImageIcon size={18} />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <span className="font-bold text-slate-800 truncate block text-sm group-hover:text-blue-600 transition-colors">{p.name}</span>
+                            <span className="text-xs text-slate-400 font-medium block truncate">{p.nameZh || 'No Chinese name'}</span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[9px] font-mono text-slate-400">SKU: {p.sku}</span>
+                              <span className="text-[9px] font-bold uppercase bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
+                                {p.category}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-right flex-shrink-0">
+                          <span className={`text-[10px] font-black whitespace-nowrap px-2 py-0.5 rounded-md block ${p.quantity <= p.minStock ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-700'}`}>
+                            {p.quantity} Units Left
+                          </span>
+                          <span className="text-[10px] text-emerald-600 font-bold block mt-1">
+                            ${p.price.toFixed(2)}/ea
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {filteredProducts.length > 8 && (
+                      <div className="p-2.5 text-center bg-slate-50 text-[11px] font-bold text-slate-500">
+                        + {filteredProducts.length - 8} more results shown in table below
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-6 text-center text-xs text-slate-400 font-medium">
+                    No assets found matching &ldquo;{searchTerm}&rdquo;
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           
           <div className="relative">
